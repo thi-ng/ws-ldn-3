@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    GPIO/GPIO_EXTI/Inc/stm32f4xx_hal_conf.h
+  * @file    HAL/HAL_TimeBase/Inc/stm32f4xx_hal_conf.h
   * @author  MCD Application Team
   * @version V1.2.2
   * @date    01-July-2015
@@ -57,7 +57,7 @@
 /* #define HAL_CRYP_MODULE_ENABLED     */ 
 /* #define HAL_DAC_MODULE_ENABLED      */ 
 /* #define HAL_DCMI_MODULE_ENABLED     */ 
-#define HAL_DMA_MODULE_ENABLED
+#define HAL_DMA_MODULE_ENABLED 
 /* #define HAL_DMA2D_MODULE_ENABLED    */ 
 /* #define HAL_ETH_MODULE_ENABLED      */
 #define HAL_FLASH_MODULE_ENABLED 
@@ -78,8 +78,8 @@
 /* #define HAL_RTC_MODULE_ENABLED       */
 /* #define HAL_SAI_MODULE_ENABLED        */   
 /* #define HAL_SD_MODULE_ENABLED         */
-#define HAL_SPI_MODULE_ENABLED
-/* #define HAL_TIM_MODULE_ENABLED       */
+#define HAL_SPI_MODULE_ENABLED       
+#define HAL_TIM_MODULE_ENABLED
 /* #define HAL_UART_MODULE_ENABLED      */
 /* #define HAL_USART_MODULE_ENABLED     */ 
 /* #define HAL_IRDA_MODULE_ENABLED      */
@@ -145,7 +145,7 @@
   * @brief This is the HAL system configuration section
   */     
 #define  VDD_VALUE                    ((uint32_t)3300) /*!< Value of VDD in mv */
-#define  TICK_INT_PRIORITY            ((uint32_t)0x0F) /*!< tick interrupt priority */           
+#define  TICK_INT_PRIORITY            ((uint32_t)0x0F) /*!< tick interrupt priority */
 #define  USE_RTOS                     0     
 #define  PREFETCH_ENABLE              1              
 #define  INSTRUCTION_CACHE_ENABLE     1
