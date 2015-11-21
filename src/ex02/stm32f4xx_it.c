@@ -9,39 +9,9 @@ void Error_Handler(void) {
 	}
 }
 
-void NMI_Handler(void) {
-}
-
-void HardFault_Handler(void) {
-	while (1) {
-	}
-}
-
-void MemManage_Handler(void) {
-	while (1) {
-	}
-}
-
-void BusFault_Handler(void) {
-	while (1) {
-	}
-}
-
-void UsageFault_Handler(void) {
-	while (1) {
-	}
-}
-
-void SVC_Handler(void) {
-}
-
-void DebugMon_Handler(void) {
-}
-
-void PendSV_Handler(void) {
-}
-
 void SysTick_Handler(void) {
+	// DON'T DO ANYTHING HERE!
+	// usually this handler calls HAL_IncTick()
 }
 
 /******************************************************************************/
@@ -50,10 +20,9 @@ void SysTick_Handler(void) {
 /*  available peripheral interrupt handler's name please refer to the startup */
 /*  file (startup_stm32f4xx.s).                                               */
 /******************************************************************************/
+
 /**
  * @brief  This function handles External line 0 interrupt request.
- * @param  None
- * @retval None
  */
 void EXTI0_IRQHandler(void) {
 	HAL_GPIO_EXTI_IRQHandler(KEY_BUTTON_PIN);
@@ -61,8 +30,6 @@ void EXTI0_IRQHandler(void) {
 
 /**
  * @brief  This function handles TIM interrupt request.
- * @param  None
- * @retval None
  */
 void TIM5_IRQHandler(void) {
 	HAL_TIM_IRQHandler(&TimHandle);
