@@ -2,22 +2,16 @@
 
 DemoFn demos[] = { demoAccelerometer, demoGyro };
 
-uint8_t demoID = 0;
+uint32_t demoID = 0;
 
-__IO uint8_t isPressed = 0;
+__IO uint32_t isPressed = 0;
 
 static void SystemClock_Config(void);
 
 int main(void) {
 	HAL_Init();
-
-	BSP_LED_Init(LED3);
-	BSP_LED_Init(LED4);
-	BSP_LED_Init(LED5);
-	BSP_LED_Init(LED6);
-
+	led_all_init();
 	SystemClock_Config();
-
 	BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
 
 	while (1) {
@@ -25,15 +19,9 @@ int main(void) {
 		demos[demoID]();
 		demoID = (demoID + 1) % 2;
 		isPressed = 0;
-		BSP_LED_On(LED3);
-		BSP_LED_On(LED4);
-		BSP_LED_On(LED5);
-		BSP_LED_On(LED6);
+		led_all_on();
 		while (!isPressed);
-		BSP_LED_Off(LED3);
-		BSP_LED_Off(LED4);
-		BSP_LED_Off(LED5);
-		BSP_LED_Off(LED6);
+		led_all_off();
 	}
 }
 
@@ -92,14 +80,12 @@ static void SystemClock_Config(void) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (KEY_BUTTON_PIN == GPIO_Pin) {
-		while (BSP_PB_GetState(BUTTON_KEY) != RESET)
-			;
+		while (BSP_PB_GetState(BUTTON_KEY) != RESET);
 		isPressed = 1;
 	}
 }
 
 void Error_Handler(void) {
-	BSP_LED_On(LED5);
-	while (1) {
-	}
+	BSP_LED_On(LED_RED);
+	while (1);
 }

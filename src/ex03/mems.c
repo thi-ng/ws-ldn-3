@@ -1,6 +1,6 @@
 #include <ex03/mems.h>
 
-extern __IO uint8_t isPressed;
+extern __IO uint32_t isPressed;
 
 int16_t thresholdAcc = 1000;
 float thresholdGyro = 5000.0;
@@ -29,22 +29,19 @@ static void readAccel(void) {
 
 	if (ABS(x) > ABS(y)) {
 		if (x > thresholdAcc) {
-			BSP_LED_On(LED5);
+			BSP_LED_On(LED_RED);
 		} else if (x < -thresholdAcc) {
-			BSP_LED_On(LED4);
+			BSP_LED_On(LED_GREEN);
 		}
 	} else {
 		if (y > thresholdAcc) {
-			BSP_LED_On(LED3);
+			BSP_LED_On(LED_ORANGE);
 		} else if (y < -thresholdAcc) {
-			BSP_LED_On(LED6);
+			BSP_LED_On(LED_BLUE);
 		}
 	}
 	HAL_Delay(10);
-	BSP_LED_Off(LED3);
-	BSP_LED_Off(LED4);
-	BSP_LED_Off(LED5);
-	BSP_LED_Off(LED6);
+	led_all_off();
 }
 
 void demoGyro(void) {
@@ -68,20 +65,17 @@ static void readGyro(void) {
 
 	if (x > y) {
 		if (buf[0] > thresholdGyro) {
-			BSP_LED_On(LED5);
+			BSP_LED_On(LED_RED);
 		} else if (buf[0] < -thresholdGyro) {
-			BSP_LED_On(LED4);
+			BSP_LED_On(LED_GREEN);
 		}
 	} else {
 		if (buf[1] > thresholdGyro) {
-			BSP_LED_On(LED3);
+			BSP_LED_On(LED_ORANGE);
 		} else if (buf[1] < -thresholdGyro) {
-			BSP_LED_On(LED6);
+			BSP_LED_On(LED_BLUE);
 		}
 	}
 	HAL_Delay(10);
-	BSP_LED_Off(LED3);
-	BSP_LED_Off(LED4);
-	BSP_LED_Off(LED5);
-	BSP_LED_Off(LED6);
+	led_all_off();
 }
