@@ -5,8 +5,9 @@
 #include "stm32f401_discovery_accelerometer.h"
 #include "stm32f401_discovery_audio.h"
 #include "stm32f401_discovery_gyroscope.h"
+#include "clockconfig.h"
 #include "led.h"
-#include <ex03/mems.h>
+#include "ex03/mems.h"
 #include <stdio.h>
 
 typedef void (*DemoFn)(void);

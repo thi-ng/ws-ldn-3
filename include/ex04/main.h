@@ -6,8 +6,8 @@
 #include "stm32f401_discovery_accelerometer.h"
 #include "stm32f401_discovery_gyroscope.h"
 #include "led.h"
-#include <ex04/audio_play.h>
-#include <ex04/audio_record.h>
+#include "ex04/audio_play.h"
+#include "ex04/audio_record.h"
 
 // Size of the recorder buffer (multiple of 4096)
 #define RECORD_BUFFER_SIZE 0x7000

@@ -1,7 +1,7 @@
 #ifndef __STM32F4xx_IT_H
 #define __STM32F4xx_IT_H
 
-#include <ex02/main.h>
+#include "ex02/main.h"
 
 void NMI_Handler(void);
 void HardFault_Handler(void);
