@@ -44,9 +44,3 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		}
 	}
 }
-
-void Error_Handler(void) {
-	BSP_LED_On(LED_RED);
-	while (1) {
-	}
-}

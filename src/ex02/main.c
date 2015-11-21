@@ -3,8 +3,6 @@
 TIM_HandleTypeDef TimHandle;
 uint32_t isSuspended = 0;
 
-static void Error_Handler(void);
-
 int main(void) {
 	/* This sample code shows how to configure The HAL time base source base with a
 	 dedicated  Tick interrupt priority.
@@ -118,11 +116,5 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 			HAL_ResumeTick();
 			isSuspended = 0;
 		}
-	}
-}
-
-static void Error_Handler(void) {
-	BSP_LED_On(LED_RED);
-	while (1) {
 	}
 }

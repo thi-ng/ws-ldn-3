@@ -3,6 +3,12 @@
 
 extern TIM_HandleTypeDef TimHandle;
 
+void Error_Handler(void) {
+	BSP_LED_On(LED_RED);
+	while (1) {
+	}
+}
+
 void NMI_Handler(void) {
 }
 

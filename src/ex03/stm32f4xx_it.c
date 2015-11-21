@@ -1,6 +1,12 @@
 #include "ex03/main.h"
 #include "ex03/stm32f4xx_it.h"
 
+void Error_Handler(void) {
+	BSP_LED_On(LED_RED);
+	while (1) {
+	}
+}
+
 void NMI_Handler(void) {
 }
 

@@ -3,6 +3,7 @@
 
 #include "ex03/main.h"
    
+void Error_Handler(void);
 void NMI_Handler(void);
 void HardFault_Handler(void);
 void MemManage_Handler(void);

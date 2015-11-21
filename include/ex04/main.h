@@ -18,6 +18,4 @@ typedef enum {
 	PAUSE_STATUS = 0, RESUME_STATUS, IDLE_STATUS
 } PlaybackState;
 
-void Error_Handler(void);
-
 #endif

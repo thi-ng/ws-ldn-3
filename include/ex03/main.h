@@ -12,6 +12,4 @@
 
 typedef void (*DemoFn)(void);
 
-void Error_Handler(void);
-
 #endif
