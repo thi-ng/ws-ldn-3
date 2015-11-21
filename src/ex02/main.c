@@ -17,18 +17,15 @@ int main(void) {
 
 	SystemClock_Config();
 
-	BSP_LED_Init(LED3);
-	BSP_LED_Init(LED4);
-	BSP_LED_Init(LED5);
-	BSP_LED_Init(LED6);
+	led_all_init();
 	BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
 
 	while (1) {
 		HAL_Delay(1000);
-		BSP_LED_Toggle(LED3);
-		BSP_LED_Toggle(LED4);
-		BSP_LED_Toggle(LED5);
-		BSP_LED_Toggle(LED6);
+		BSP_LED_Toggle(LED_ORANGE);
+		BSP_LED_Toggle(LED_RED);
+		BSP_LED_Toggle(LED_GREEN);
+		BSP_LED_Toggle(LED_BLUE);
 	}
 }
 
@@ -93,22 +90,12 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
 	return HAL_OK;
 }
 
-/**
- * @brief  Suspend Tick increment.
- * @note   Disable the tick increment by disabling TIM5 update interrupt.
- * @param  None
- * @retval None
- */
+// Disables the tick increment by disabling TIM5 update interrupt.
 void HAL_SuspendTick(void) {
 	__HAL_TIM_DISABLE_IT(&TimHandle, TIM_IT_UPDATE);
 }
 
-/**
- * @brief  Resume Tick increment.
- * @note   Enable the tick increment by Enabling TIM5 update interrupt.
- * @param  None
- * @retval None
- */
+// Enables the tick increment by Enabling TIM5 update interrupt.
 void HAL_ResumeTick(void) {
 	__HAL_TIM_ENABLE_IT(&TimHandle, TIM_IT_UPDATE);
 }
@@ -119,7 +106,6 @@ void HAL_ResumeTick(void) {
  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
  * a global variable "uwTick" used as application time base.
  * @param  htim : TIM handle
- * @retval None
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	HAL_IncTick();
@@ -192,8 +178,7 @@ static void SystemClock_Config(void) {
 }
 
 static void Error_Handler(void) {
-	/* Turn LED5 on */
-	BSP_LED_On(LED5);
+	BSP_LED_On(LED_RED);
 	while (1) {
 	}
 }
