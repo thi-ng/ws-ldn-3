@@ -6,11 +6,6 @@
 #define PCM_SIZE2 (2 * PCM_OUT_SIZE)
 #define PCM_SIZE4 (4 * PCM_OUT_SIZE)
 
-typedef struct {
-	int32_t offset;
-	uint32_t ptr;
-} AudioBufferState;
-
 typedef enum {
 	BUFFER_OFFSET_NONE = 0, BUFFER_OFFSET_HALF, BUFFER_OFFSET_FULL
 } DMABufferState;
@@ -19,7 +14,11 @@ typedef enum {
 	RECORD_WAIT = 0, RECORD_BUFFER_FLIP, RECORD_DONE
 } RecordState;
 
-uint8_t wavHeader[44];
+typedef struct {
+	DMABufferState offset;
+	uint32_t ptr;
+} AudioBufferState;
+
 uint16_t recordBuffer[RECORD_BUFFER_SIZE];
 
 static uint16_t bufPCM[PCM_SIZE2];
@@ -45,10 +44,9 @@ void demoAudioRecord(void) {
 		Error_Handler();
 	}
 
-	BSP_LED_On(LED3);
+	BSP_LED_On(LED_ORANGE);
 
-	if (BSP_AUDIO_IN_Record((uint16_t*) &bufPDM[0],
-	INTERNAL_BUFF_SIZE) != AUDIO_OK) {
+	if (BSP_AUDIO_IN_Record(bufPDM, INTERNAL_BUFF_SIZE) != AUDIO_OK) {
 		Error_Handler();
 	}
 	bufferState.ptr = 0;
@@ -57,11 +55,10 @@ void demoAudioRecord(void) {
 	while (audioRecordState != RECORD_DONE) {
 		if (bufferState.offset == BUFFER_OFFSET_HALF) {
 			/* PDM to PCM data convert */
-			BSP_AUDIO_IN_PDMToPCM((uint16_t*) &bufPDM[0],
-					(uint16_t*) &bufPCM[0]);
+			BSP_AUDIO_IN_PDMToPCM(bufPDM, bufPCM);
 
 			/* Copy PCM data in internal buffer */
-			memcpy((uint16_t*) &recordBuffer[numRecorded * PCM_SIZE2], bufPCM,
+			memcpy(&recordBuffer[numRecorded * PCM_SIZE2], bufPCM,
 			PCM_SIZE4);
 
 			bufferState.offset = BUFFER_OFFSET_NONE;
@@ -81,10 +78,8 @@ void demoAudioRecord(void) {
 		}
 
 		if (bufferState.offset == BUFFER_OFFSET_FULL) {
-			BSP_AUDIO_IN_PDMToPCM((uint16_t*) &bufPDM[INTERNAL_BUFF_SIZE / 2],
-					(uint16_t*) &bufPCM[0]);
-			memcpy((uint16_t*) &recordBuffer[numRecorded * PCM_SIZE2], bufPCM,
-					PCM_SIZE4);
+			BSP_AUDIO_IN_PDMToPCM(&bufPDM[INTERNAL_BUFF_SIZE / 2], bufPCM);
+			memcpy(&recordBuffer[numRecorded * PCM_SIZE2], bufPCM, PCM_SIZE4);
 
 			bufferState.offset = BUFFER_OFFSET_NONE;
 
@@ -111,14 +106,15 @@ void demoAudioRecord(void) {
 
 	audioTotalSize = AUDIODATA_SIZE * RECORD_BUFFER_SIZE;
 	audioRemSize = 0;
-	currentPos = (uint16_t *) (recordBuffer);
+	currentPos = recordBuffer;
 
 	BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 70, DEFAULT_AUDIO_IN_FREQ);
 	BSP_AUDIO_OUT_Play(recordBuffer, audioTotalSize);
 	BSP_LED_Off(LED_ORANGE);
 	BSP_LED_On(LED_BLUE);
 
-	while (!isPressed);
+	while (!isPressed)
+		;
 
 	if (BSP_AUDIO_OUT_Stop(CODEC_PDWN_SW) != AUDIO_OK) {
 		Error_Handler();
