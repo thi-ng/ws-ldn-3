@@ -6,19 +6,17 @@
 extern __IO uint32_t isLooping;
 extern __IO uint32_t numPressed;
 extern __IO AppCommand appCommand;
-extern uint32_t isRecording;
 extern __IO PlaybackState playbackState;
 extern AppState appState;
-
-__IO uint32_t ledState;
-__IO uint32_t isPlaying = 0;
+extern uint32_t isRecording;
 
 static uint32_t waveDataLength = 0;
 static __IO uint32_t samplesRemaining = 0;
 
-uint8_t audioBuffer[AUDIO_BUFFER_SIZE];
-
+__IO uint32_t ledState;
+__IO uint32_t isPlaying = 0;
 __IO uint32_t bufferState = BUFFER_OFFSET_NONE;
+uint8_t audioBuffer[AUDIO_BUFFER_SIZE];
 
 FIL FileRead;
 DIR Directory;

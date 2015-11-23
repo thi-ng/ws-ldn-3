@@ -1,5 +1,5 @@
-#include <ex04/main.h>
-#include <ex04/stm32f4xx_it.h>
+#include "ex04/main.h"
+#include "ex04/stm32f4xx_it.h"
 
 extern I2S_HandleTypeDef hAudioOutI2s;
 extern I2S_HandleTypeDef hAudioInI2s;

@@ -120,8 +120,9 @@ static void startApp(void) {
 static void executeAppCommand(void) {
 	switch (appCommand) {
 	case CMD_PLAY:
-		if (isLooping)
+		if (isLooping) {
 			startPlayback();
+		}
 		break;
 
 	case CMD_RECORD:
@@ -151,7 +152,8 @@ static void TIM_LED_Config(void) {
 	 ----------------------------------------------------------------------- */
 
 	/* Compute the prescaler value */
-	uint16_t prescalervalue = (uint16_t) ((HAL_RCC_GetPCLK1Freq() * 2) / 250000) - 1;
+	uint16_t prescalervalue = (uint16_t) ((HAL_RCC_GetPCLK1Freq() * 2) / 250000)
+			- 1;
 
 	/* Time base configuration */
 	ledTimer.Instance = TIM4;

@@ -1,6 +1,6 @@
 #include "stm32f4xx_hal.h"
 
-#include "../../libsrc/stm_usbh/Core/Inc/usbh_core.h"
+#include "usbh_core.h"
 
 HCD_HandleTypeDef usbHCD;
 
