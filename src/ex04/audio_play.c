@@ -22,10 +22,9 @@ typedef struct {
 
 extern __IO uint32_t isPressed;
 extern __IO PlaybackState playbackState;
+__IO uint32_t useRecordBuffer = 0;
 
 WavHeader *wav = NULL;
-
-__IO uint32_t useRecordBuffer = 0;
 
 uint32_t audioTotalSize = 0xffff; // total size of the audio file
 uint32_t audioRemSize = 0xffff; // remaining data in audio file
@@ -52,7 +51,7 @@ void demoAudioPlayback(void) {
 	useRecordBuffer = 0;
 
 	audioTotalSize = AUDIO_FILE_SIZE;
-	currentPos = (uint16_t *) (AUDIO_FILE_ADDRESS);
+	currentPos = (uint16_t*) AUDIO_FILE_ADDRESS;
 	BSP_AUDIO_OUT_Play(currentPos, audioTotalSize);
 	audioRemSize = audioTotalSize - AUDIODATA_SIZE * DMA_MAX(audioTotalSize);
 	currentPos += DMA_MAX(audioTotalSize);
@@ -81,7 +80,7 @@ void BSP_AUDIO_OUT_TransferComplete_CallBack() {
 	uint32_t isLooping = 0;
 
 	if (audioRemSize > 0) {
-		BSP_AUDIO_OUT_ChangeBuffer((uint16_t*) currentPos,
+		BSP_AUDIO_OUT_ChangeBuffer(currentPos,
 				DMA_MAX(audioRemSize/AUDIODATA_SIZE));
 		currentPos += DMA_MAX(audioRemSize);
 		audioRemSize -= AUDIODATA_SIZE * DMA_MAX(audioRemSize / AUDIODATA_SIZE);
@@ -93,7 +92,7 @@ void BSP_AUDIO_OUT_TransferComplete_CallBack() {
 		if (useRecordBuffer) {
 			BSP_AUDIO_OUT_Play(recordBuffer, audioTotalSize);
 		} else {
-			currentPos = (uint16_t *) (AUDIO_FILE_ADDRESS);
+			currentPos = (uint16_t*) AUDIO_FILE_ADDRESS;
 			BSP_AUDIO_OUT_Play(currentPos, audioTotalSize);
 			audioRemSize = audioTotalSize
 					- AUDIODATA_SIZE * DMA_MAX(audioTotalSize);

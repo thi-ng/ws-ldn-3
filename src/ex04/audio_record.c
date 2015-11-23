@@ -1,5 +1,5 @@
 #include "ex04/audio_record.h"
-#include "string.h"
+#include <string.h>
 
 #define AUDIO_BUFFER_SIZE 8192
 
@@ -15,7 +15,7 @@ typedef enum {
 } RecordState;
 
 typedef struct {
-	DMABufferState offset;
+	DMABufferState state;
 	uint32_t ptr;
 } AudioBufferState;
 
@@ -37,7 +37,7 @@ extern uint32_t audioRemSize;
 extern uint16_t *currentPos;
 
 void demoAudioRecord(void) {
-	bufferState.offset = BUFFER_OFFSET_NONE;
+	bufferState.state = BUFFER_OFFSET_NONE;
 	if (BSP_AUDIO_IN_Init(DEFAULT_AUDIO_IN_FREQ,
 	DEFAULT_AUDIO_IN_BIT_RESOLUTION,
 	DEFAULT_AUDIO_IN_CHANNEL_NBR) != AUDIO_OK) {
@@ -53,7 +53,7 @@ void demoAudioRecord(void) {
 	audioRecordState = RECORD_WAIT;
 
 	while (audioRecordState != RECORD_DONE) {
-		if (bufferState.offset == BUFFER_OFFSET_HALF) {
+		if (bufferState.state == BUFFER_OFFSET_HALF) {
 			/* PDM to PCM data convert */
 			BSP_AUDIO_IN_PDMToPCM(bufPDM, bufPCM);
 
@@ -61,7 +61,7 @@ void demoAudioRecord(void) {
 			memcpy(&recordBuffer[numRecorded * PCM_SIZE2], bufPCM,
 			PCM_SIZE4);
 
-			bufferState.offset = BUFFER_OFFSET_NONE;
+			bufferState.state = BUFFER_OFFSET_NONE;
 
 			if (numRecorded == (RECORD_BUFFER_SIZE / PCM_SIZE4) - 1) {
 				audioRecordState = RECORD_BUFFER_FLIP;
@@ -77,11 +77,11 @@ void demoAudioRecord(void) {
 
 		}
 
-		if (bufferState.offset == BUFFER_OFFSET_FULL) {
+		if (bufferState.state == BUFFER_OFFSET_FULL) {
 			BSP_AUDIO_IN_PDMToPCM(&bufPDM[INTERNAL_BUFF_SIZE / 2], bufPCM);
 			memcpy(&recordBuffer[numRecorded * PCM_SIZE2], bufPCM, PCM_SIZE4);
 
-			bufferState.offset = BUFFER_OFFSET_NONE;
+			bufferState.state = BUFFER_OFFSET_NONE;
 
 			if (numRecorded == (RECORD_BUFFER_SIZE / PCM_SIZE4) - 1) {
 				audioRecordState = RECORD_BUFFER_FLIP;
@@ -123,12 +123,12 @@ void demoAudioRecord(void) {
 
 // Calculates the remaining file size and new position of the pointer
 void BSP_AUDIO_IN_TransferComplete_CallBack(void) {
-	bufferState.offset = BUFFER_OFFSET_FULL;
+	bufferState.state = BUFFER_OFFSET_FULL;
 }
 
 // Manages the DMA Half Transfer complete interrupt
 void BSP_AUDIO_IN_HalfTransfer_CallBack(void) {
-	bufferState.offset = BUFFER_OFFSET_HALF;
+	bufferState.state = BUFFER_OFFSET_HALF;
 }
 
 // Audio input error callback

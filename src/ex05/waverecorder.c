@@ -3,7 +3,7 @@
 #include <string.h>
 
 typedef struct {
-	DMABufferState offset;
+	DMABufferState state;
 	uint32_t ptr;
 } AudioBufferState;
 
@@ -17,14 +17,14 @@ __IO uint32_t numRecorded = 0;
 uint32_t isRecording = 0;
 uint16_t recordBuffer[RECORD_BUFFER_SIZE];
 
-static uint16_t bufPCM[PCM_OUT_SIZE * 2];/* PCM stereo samples are saved in RecBuf */
+static uint16_t bufPCM[PCM_SIZE2];/* PCM stereo samples are saved in RecBuf */
 static uint16_t bufPDM[INTERNAL_BUFF_SIZE];
 
 AudioBufferState bufferState;
 WavHeader wav;
 
 FIL wavFile;
-__IO uint32_t isAudioDataReady = 0, AUDIOBuffOffset = 0;
+__IO uint32_t isAudioDataReady = 0, audioBufOffset = 0;
 __IO FRESULT res;
 
 static void initWavHeader(uint32_t freq, WavHeader* header);
@@ -48,7 +48,7 @@ static void updateWavHeader(WavHeader* wav, uint32_t length);
  order must be respected when managing other interrupts;
  */
 uint8_t startWaveRecorder(uint16_t* buf, uint32_t size) {
-	bufferState.offset = BUFFER_OFFSET_NONE;
+	bufferState.state = BUFFER_OFFSET_NONE;
 	BSP_AUDIO_IN_Init(DEFAULT_AUDIO_IN_FREQ, DEFAULT_AUDIO_IN_BIT_RESOLUTION,
 	DEFAULT_AUDIO_IN_CHANNEL_NBR);
 	return BSP_AUDIO_IN_Record(buf, size);
@@ -71,14 +71,14 @@ void recordWaveFile(void) {
 					!= FR_OK)) {
 		while (1) {
 			// USB file error
-			BSP_LED_Toggle(LED5);
+			BSP_LED_Toggle(LED_RED);
 			HAL_Delay(50);
 		}
 	} else {
 		isRecording = 1;
 	}
 	initWavHeader(DEFAULT_AUDIO_IN_FREQ, &wav);
-	f_write(&wavFile, &wav, 44, (void *) &byteswritten);
+	f_write(&wavFile, &wav, 44, (void*) &byteswritten);
 	bufferState.ptr = byteswritten;
 	startWaveRecorder(bufPDM, INTERNAL_BUFF_SIZE);
 
@@ -91,8 +91,8 @@ void recordWaveFile(void) {
 			/* Check if there are Data to write in Usb Key */
 			if (isAudioDataReady == 1) {
 				/* write buffer in file */
-				res = f_write(&wavFile, recordBuffer + AUDIOBuffOffset,
-				RECORD_BUFFER_SIZE, (UINT*) &byteswritten);
+				res = f_write(&wavFile, recordBuffer + audioBufOffset,
+				RECORD_BUFFER_SIZE, (void*) &byteswritten);
 				if (res != FR_OK) {
 					Error_Handler();
 				}
@@ -153,18 +153,17 @@ static void updateWavHeader(WavHeader* wav, uint32_t length) {
 
 void BSP_AUDIO_IN_TransferComplete_CallBack(void) {
 	BSP_AUDIO_IN_PDMToPCM(&bufPDM[INTERNAL_BUFF_SIZE / 2], bufPCM);
-	memcpy(&recordBuffer[numRecorded * (PCM_OUT_SIZE * 2)], bufPCM,
-	PCM_OUT_SIZE * 4);
+	memcpy(&recordBuffer[numRecorded * PCM_SIZE2], bufPCM, PCM_SIZE4);
 
-	bufferState.offset = BUFFER_OFFSET_NONE;
+	bufferState.state = BUFFER_OFFSET_NONE;
 
-	if (numRecorded == (RECORD_BUFFER_SIZE / (PCM_OUT_SIZE * 4)) - 1) {
+	if (numRecorded == (RECORD_BUFFER_SIZE / PCM_SIZE4) - 1) {
 		isAudioDataReady = 1;
-		AUDIOBuffOffset = 0;
+		audioBufOffset = 0;
 		numRecorded++;
-	} else if (numRecorded == (RECORD_BUFFER_SIZE / (PCM_OUT_SIZE * 2)) - 1) {
+	} else if (numRecorded == (RECORD_BUFFER_SIZE / PCM_SIZE2) - 1) {
 		isAudioDataReady = 1;
-		AUDIOBuffOffset = RECORD_BUFFER_SIZE / 2;
+		audioBufOffset = RECORD_BUFFER_SIZE / 2;
 		numRecorded = 0;
 	} else {
 		numRecorded++;
@@ -178,18 +177,17 @@ void BSP_AUDIO_IN_TransferComplete_CallBack(void) {
  */
 void BSP_AUDIO_IN_HalfTransfer_CallBack(void) {
 	BSP_AUDIO_IN_PDMToPCM(bufPDM, bufPCM);
-	memcpy(&recordBuffer[numRecorded * (PCM_OUT_SIZE * 2)], bufPCM,
-	PCM_OUT_SIZE * 4);
+	memcpy(&recordBuffer[numRecorded * PCM_SIZE2], bufPCM, PCM_SIZE4);
 
-	bufferState.offset = BUFFER_OFFSET_NONE;
+	bufferState.state = BUFFER_OFFSET_NONE;
 
-	if (numRecorded == (RECORD_BUFFER_SIZE / (PCM_OUT_SIZE * 4)) - 1) {
+	if (numRecorded == (RECORD_BUFFER_SIZE / PCM_SIZE4) - 1) {
 		isAudioDataReady = 1;
-		AUDIOBuffOffset = 0;
+		audioBufOffset = 0;
 		numRecorded++;
-	} else if (numRecorded == (RECORD_BUFFER_SIZE / (PCM_OUT_SIZE * 2)) - 1) {
+	} else if (numRecorded == (RECORD_BUFFER_SIZE / PCM_SIZE2) - 1) {
 		isAudioDataReady = 1;
-		AUDIOBuffOffset = RECORD_BUFFER_SIZE / 2;
+		audioBufOffset = RECORD_BUFFER_SIZE / 2;
 		numRecorded = 0;
 	} else {
 		numRecorded++;
