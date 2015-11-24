@@ -20,7 +20,7 @@
 #define WAVE_NAME "0:sample.wav"
 #define REC_WAVE_NAME "0:record.wav"
   
-#define MEMS_LIS3DSH 0x3F
-#define MEMS_LIS302DL 0x3B
+//#define MEMS_LIS3DSH 0x3F
+//#define MEMS_LIS302DL 0x3B
                                                                                     
 #endif

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "ex06/synth.h"
 
+static tinymt32_t synthRNG;
+
 void synth_osc_init(SynthOsc *osc, OscFn fn, float gain, float phase,
 		float freq, float dc) {
 	osc->fn = fn;
@@ -90,6 +92,14 @@ float synth_osc_wtable_morph(SynthOsc *osc, float lfo, float morph) {
 	return mixf(WTABLE_LOOKUP(osc->wtable1, phase), WTABLE_LOOKUP(osc->wtable2, phase), morph) * osc->amp;
 }
 
+float synth_osc_noise(SynthOsc *osc, float lfo, float lfo2) {
+	return NORM_RANDF(&synthRNG) * osc->amp;
+}
+
+float synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2) {
+	return osc->dcOffset + NORM_RANDF(&synthRNG) * osc->amp;
+}
+
 float synth_osc_nop(SynthOsc *osc, float lfo, float lfo2) {
 	return osc->dcOffset;
 }
@@ -160,7 +170,8 @@ void synth_init(Synth *synth) {
 	}
 	synth_osc_init(&(synth->lfoFilter), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
 	synth_osc_init(&(synth->lfoEnvMod), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
-	synth_bus_init(&(synth->bus[0]), malloc(sizeof(int16_t) * 2), 2, 2);
+	synth_bus_init(&(synth->bus[0]), malloc(sizeof(int16_t)), 1, 2);
+	tinymt32_init(&synthRNG, 0xcafebad);
 }
 
 SynthVoice* synth_new_voice(Synth *synth) {

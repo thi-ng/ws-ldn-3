@@ -1,5 +1,5 @@
-#ifndef __EX06_SINELUT_H
-#define __EX06_SINELUT_H
+#ifndef __EX06_WAVETABLE_H
+#define __EX06_WAVETABLE_H
 
 #include <math.h>
 #include "ex06/synth.h"

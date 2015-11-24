@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "ex06/wavetable.h"
+#include "tinymt32.h"
 
 #define TAU                     6.283185307f
 #define PI                    	3.14159265f
@@ -13,11 +14,14 @@
 
 #define SAMPLERATE				44100
 #define SYNTH_POLYPHONY			4
-#define AUDIO_BUFFER_SIZE		16384
+#define AUDIO_BUFFER_SIZE		512
 #define ADSR_SCALE				32767.0f;
-#define DELAY_LENGTH			(uint32_t)(SAMPLERATE * 0.125f)
+#define DELAY_LENGTH			(uint32_t)(SAMPLERATE * 0.375f)
 
-#define FREQ_TO_RAD(freq)		((PI * (freq)) / SAMPLERATE)
+#define FREQ_TO_RAD(freq)		((TAU * (freq)) / (float)SAMPLERATE)
+
+#define RANDF(rnd)				tinymt32_generate_float(rnd)
+#define NORM_RANDF(rnd)			maddf(RANDF(rnd), 2.0f, -1.0f)
 
 inline float truncPhase(float phase) {
 	while (phase >= TAU) {
