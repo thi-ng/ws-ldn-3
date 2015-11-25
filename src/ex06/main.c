@@ -6,14 +6,20 @@ __IO int32_t noteDir = 1;
 uint8_t audioBuffer[AUDIO_BUFFER_SIZE];
 
 static void updateAudioBuffer(Synth *synth);
+static tinymt32_t rng;
 
 int main(void) {
 	HAL_Init();
+
 	led_all_init();
+
 	SystemClock_Config();
+
 	BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
 
-	if (BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 70, SAMPLERATE) != 0) {
+	HAL_Delay(1000);
+
+	if (BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 75, SAMPLERATE) != 0) {
 		Error_Handler();
 	}
 
@@ -23,8 +29,6 @@ int main(void) {
 			(int16_t*) malloc(sizeof(int16_t) * DELAY_LENGTH),
 			DELAY_LENGTH, 2);
 	synth_osc_init(&(synth.lfoEnvMod), synth_osc_sin_dc, 1.5f, PI, 0.05f, 2.0f);
-
-	HAL_Delay(100);
 	BSP_AUDIO_OUT_Play((uint16_t*) &audioBuffer[0], AUDIO_BUFFER_SIZE);
 
 	uint32_t nextNote = 0;
@@ -37,8 +41,13 @@ int main(void) {
 			36
 	};
 
+	OscFn instruments[] = { synth_osc_sin, synth_osc_rect, synth_osc_tri, synth_osc_saw };
+
+	tinymt32_init(&rng, 0xdecafbad);
+
 	while (1) {
-		if ((HAL_GetTick() % 250) == 0) {
+		uint32_t tick = HAL_GetTick();
+		if ((tick % 250) == 0) {
 			if (nextNote) {
 				BSP_LED_Toggle(LED_GREEN);
 				SynthVoice *voice = synth_new_voice(&synth);
@@ -47,10 +56,13 @@ int main(void) {
 				synth_osc_init(&(voice->lfoPitch), synth_osc_sin,
 						FREQ_TO_RAD(5.0f), 0.0f, 10.0f, 0.0f);
 				float freq = notes[7 + scale[noteID]];
-				synth_osc_init(&(voice->osc[0]), synth_osc_tri, 0.15f, 0.0f,
+				uint32_t instID = 2;
+				//uint32_t instID = tinymt32_generate_uint32(&rng) & 3;
+				synth_osc_init(&(voice->osc[0]), instruments[instID], 0.15f, 0.0f,
 						freq, 0.0f);
 				freq = notes[2 + scale[noteID]];
-				synth_osc_init(&(voice->osc[1]), synth_osc_tri, 0.15f, 0.0f,
+				//instID = tinymt32_generate_uint32(&rng) & 3;
+				synth_osc_init(&(voice->osc[1]), instruments[instID], 0.15f, 0.0f,
 						freq * 1.01f, 0.0f);
 				nextNote = 0;
 				noteID = (noteID + noteDir);

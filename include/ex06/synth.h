@@ -13,10 +13,11 @@
 #define INV_HALF_PI				(1.0f / HALF_PI)
 
 #define SAMPLERATE				44100
-#define SYNTH_POLYPHONY			4
+#define SYNTH_POLYPHONY			5
 #define AUDIO_BUFFER_SIZE		512
 #define ADSR_SCALE				32767.0f;
 #define DELAY_LENGTH			(uint32_t)(SAMPLERATE * 0.375f)
+//#define SYNTH_USE_DELAY
 
 #define FREQ_TO_RAD(freq)		((TAU * (freq)) / (float)SAMPLERATE)
 
@@ -32,6 +33,10 @@ inline float truncPhase(float phase) {
 
 inline float clampf(float x, float min, float max) {
 	return (x < min) ? min : (x > max ? max : x);
+}
+
+inline int16_t clamp16(int32_t x) {
+	return (int16_t)((x < -0x7fff) ? -0x8000 : (x > 0x7fff ? 0x7fff : x));
 }
 
 inline float stepf(float x, float edge, float y1, float y2) {

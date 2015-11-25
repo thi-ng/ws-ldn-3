@@ -224,17 +224,22 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 			voice--;
 		}
 		sumL += *(fx->readPtr);
+		clamp16(sumL);
 		sumR += *(fx->readPtr);
+		clamp16(sumR);
+#ifdef SYNTH_USE_DELAY
 		fx->readPtr++;
 		fx->readPos++;
 		if (fx->readPos >= fx->len) {
 			fx->readPos = 0;
 			fx->readPtr = &(fx->buf[0]);
 		}
+#endif
 		*ptr = sumL;
 		ptr++;
 		*ptr = sumR;
 		ptr++;
+#ifdef SYNTH_USE_DELAY
 		*(fx->writePtr) = ((sumL + sumR) >> fx->decay);
 		fx->writePtr++;
 		fx->writePos++;
@@ -242,5 +247,6 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 			fx->writePos = 0;
 			fx->writePtr = &(fx->buf[0]);
 		}
+#endif
 	}
 }
