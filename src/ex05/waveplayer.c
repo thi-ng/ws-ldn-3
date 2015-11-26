@@ -18,7 +18,7 @@ __IO uint32_t isPlaying = 0;
 __IO uint32_t bufferState = BUFFER_OFFSET_NONE;
 uint8_t audioBuffer[AUDIO_BUFFER_SIZE];
 
-FIL FileRead;
+FIL audioFile;
 DIR Directory;
 
 void playWaveFile(uint32_t freq) {
@@ -34,8 +34,8 @@ void playWaveFile(uint32_t freq) {
 	}
 
 	/* Get Data from USB Flash Disk */
-	f_lseek(&FileRead, 0);
-	f_read(&FileRead, audioBuffer, AUDIO_BUFFER_SIZE, &bytesread);
+	f_lseek(&audioFile, 0);
+	f_read(&audioFile, audioBuffer, AUDIO_BUFFER_SIZE, &bytesread);
 	samplesRemaining = waveDataLength - bytesread;
 
 	/* Start playing Wave */
@@ -59,14 +59,14 @@ void playWaveFile(uint32_t freq) {
 			bytesread = 0;
 
 			if (bufferState == BUFFER_OFFSET_HALF) {
-				f_read(&FileRead, &audioBuffer[0],
+				f_read(&audioFile, &audioBuffer[0],
 				AUDIO_BUFFER_SIZE / 2, (void *) &bytesread);
 
 				bufferState = BUFFER_OFFSET_NONE;
 			}
 
 			if (bufferState == BUFFER_OFFSET_FULL) {
-				f_read(&FileRead, &audioBuffer[AUDIO_BUFFER_SIZE / 2],
+				f_read(&audioFile, &audioBuffer[AUDIO_BUFFER_SIZE / 2],
 				AUDIO_BUFFER_SIZE / 2, (void *) &bytesread);
 
 				bufferState = BUFFER_OFFSET_NONE;
@@ -78,7 +78,7 @@ void playWaveFile(uint32_t freq) {
 			}
 		} else {
 			stopPlayback();
-			f_close(&FileRead);
+			f_close(&audioFile);
 			samplesRemaining = 0;
 			isLooping = 1;
 			break;
@@ -88,7 +88,7 @@ void playWaveFile(uint32_t freq) {
 	isLooping = 1;
 	isPlaying = 0;
 	stopPlayback();
-	f_close(&FileRead);
+	f_close(&audioFile);
 }
 
 int initPlayback(uint32_t freq) {
@@ -111,12 +111,12 @@ void startPlayback(void) {
 			wavefilename = WAVE_NAME;
 		}
 		/* Open the Wave file to be played */
-		if (f_open(&FileRead, wavefilename, FA_READ) != FR_OK) {
+		if (f_open(&audioFile, wavefilename, FA_READ) != FR_OK) {
 			BSP_LED_On(LED5);
 			appCommand = CMD_RECORD;
 		} else {
 			/* Read sizeof(WaveFormat) from the selected file */
-			f_read(&FileRead, &waveformat, sizeof(waveformat), &bytesread);
+			f_read(&audioFile, &waveformat, sizeof(waveformat), &bytesread);
 
 			/* Set WaveDataLenght to the Speech Wave length */
 			waveDataLength = waveformat.riffLength;
