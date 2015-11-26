@@ -1,4 +1,4 @@
-#include "ex06/wavetable.h"
+#include "synth/wavetable.h"
 
 const float wtable_harmonics_1[WAVE_TABLE_LENGTH] = { 0.00000000f, 0.03137612f,
 		0.06271470f, 0.09397834f, 0.12512977f, 0.15613205f, 0.18694858f,

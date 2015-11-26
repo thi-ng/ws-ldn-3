@@ -1,8 +1,8 @@
-#ifndef __EX06_SYNTH_H
-#define __EX06_SYNTH_H
+#ifndef __SYNTH_H
+#define __SYNTH_H
 
 #include <stdint.h>
-#include "ex06/wavetable.h"
+#include "synth/wavetable.h"
 #include "tinymt32.h"
 
 #define TAU                     6.283185307f

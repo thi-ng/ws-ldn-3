@@ -1,4 +1,4 @@
-#include "ex06/scales.h"
+#include "synth/scales.h"
 
 const float notes[] = {
 		// c3

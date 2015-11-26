@@ -1,6 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
-#include "ex06/synth.h"
+#include "synth/synth.h"
 
 static tinymt32_t synthRNG;
 

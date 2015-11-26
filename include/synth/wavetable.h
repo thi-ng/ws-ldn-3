@@ -1,8 +1,8 @@
-#ifndef __EX06_WAVETABLE_H
-#define __EX06_WAVETABLE_H
+#ifndef __WAVETABLE_H
+#define __WAVETABLE_H
 
 #include <math.h>
-#include "ex06/synth.h"
+#include "synth/synth.h"
 
 #define WAVE_TABLE_LENGTH		1024
 #define WAVE_TABLE_SCALE		(WAVE_TABLE_LENGTH / TAU)
