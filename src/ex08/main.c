@@ -28,6 +28,8 @@ static Synth synth;
 static SeqTrack* tracks[2];
 static tinymt32_t rng;
 
+static float tempoScale[] = { 0.25f, 0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 4.0f };
+
 static int8_t notes1[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 static int8_t notes2[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
@@ -151,8 +153,7 @@ void processMidiPackets() {
 					tracks[0]->ticks = (uint32_t) (100 + r * (1000 - 100));
 					break;
 				case MIDI_CC_KNOB2:
-					r = (float) val / 127.0f;
-					tracks[1]->ticks = (uint32_t) (100 + r * (1000 - 100));
+					tracks[1]->ticks = tempoScale[val * 7 / 128] * tracks[0]->ticks;
 					break;
 				default:
 					if (subtype >= MIDI_CC_BT_S1 && subtype <= MIDI_CC_BT_S8) {
@@ -166,7 +167,7 @@ void processMidiPackets() {
 						int8_t note = tracks[1]->notes[subtype - MIDI_CC_BT_M1];
 						tracks[1]->notes[subtype - MIDI_CC_BT_M1] = (
 								(note == -1) ?
-										(tinymt32_generate_uint32(&rng) % 72) :
+										(tinymt32_generate_uint32(&rng) % 24) :
 										-1);
 					}
 					break;
@@ -242,8 +243,8 @@ void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	synth_adsr_init(&(voice->env), 0.25f, 0.0000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_saw, 0.30f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_saw, 0.30f, 0.0f, freq * 0.51f,
+	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.15f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.15f, 0.0f, freq * 0.51f,
 			0.0f);
 	//BSP_LED_Toggle(LED_ORANGE);
 }
