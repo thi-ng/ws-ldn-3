@@ -1,4 +1,4 @@
-#include "ex07/sequencer.h"
+#include "synth/sequencer.h"
 #include "synth/synth.h"
 
 SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes,

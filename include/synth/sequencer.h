@@ -1,5 +1,5 @@
-#ifndef __EX07_SEQUENCER_H_
-#define __EX07_SEQUENCER_H_
+#ifndef __SEQUENCER_H_
+#define __SEQUENCER_H_
 
 #include "synth/synth.h"
 

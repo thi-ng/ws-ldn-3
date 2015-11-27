@@ -12,7 +12,7 @@
 #include "led.h"
 #include "synth/synth.h"
 #include "synth/scales.h"
-#include "ex07/sequencer.h"
+#include "synth/sequencer.h"
 
 typedef enum {
 	BUFFER_OFFSET_NONE = 0, BUFFER_OFFSET_HALF, BUFFER_OFFSET_FULL
