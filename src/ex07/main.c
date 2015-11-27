@@ -23,7 +23,7 @@ int main(void) {
 	BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
 	HAL_Delay(1000);
 
-	if (BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 80, SAMPLERATE) != 0) {
+	if (BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 85, SAMPLERATE) != 0) {
 		Error_Handler();
 	}
 
@@ -31,13 +31,13 @@ int main(void) {
 	synth_bus_init(&(synth.bus[0]),
 			(int16_t*) malloc(sizeof(int16_t) * DELAY_LENGTH),
 			DELAY_LENGTH, 2);
-	synth_osc_init(&(synth.lfoEnvMod), synth_osc_sin_dc, 3.5f, PI, 0.05f, 4.0f);
+	synth_osc_init(&(synth.lfoEnvMod), synth_osc_sin_dc, 0, 0, 0, 1.0f);
 	BSP_AUDIO_OUT_Play((uint16_t*) &audioBuffer[0], AUDIO_BUFFER_SIZE);
 
  	int8_t notes1[16] = {
-			12, -1, 12, 12,
+			36, -1, 12, 12,
 			-1, -1, -1, -1,
-			24, -1, 17, 12,
+			48, -1, 17, 12,
 			-1, -1, -1, 24 };
 
 	int8_t notes2[16] = {
@@ -56,14 +56,14 @@ int main(void) {
 			notes1, 16, 250);
 
 	tracks[1] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst2,
-				notes2, 16, 250);
+				notes2, 16, 500);
 
-	tracks[2] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst3,
-				notes3, 8, 1000);
+	//tracks[2] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst3,
+	//			notes3, 8, 1000);
 
 	while (1) {
 		uint32_t tick = HAL_GetTick();
-		updateAllTracks(&synth, tracks, 3, tick);
+		updateAllTracks(&synth, tracks, 2, tick);
 		updateAudioBuffer(&synth);
 	}
 }
@@ -71,23 +71,23 @@ int main(void) {
 void playNoteInst1(Synth* synth, int8_t note, uint32_t tick) {
 	float freq = notes[note + keyChanges[transposeID]];
 	SynthVoice *voice = synth_new_voice(synth);
-	synth_adsr_init(&(voice->env), 0.0025f, 0.000025f, 0.00005f, 1.0f, 0.25f);
+	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_tri, 0.20f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_saw, 0.10f, 0.0f, freq * 1.01f,
+	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.20f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.10f, 0.0f, freq,
 			0.0f);
 	BSP_LED_Toggle(LED_GREEN);
 }
 
 void playNoteInst2(Synth* synth, int8_t note, uint32_t tick) {
-	float freq = notes[note + keyChanges[transposeID]];
+	float freq = notes[note + keyChanges[transposeID]] * 0.5f;
 	SynthVoice *voice = synth_new_voice(synth);
-	synth_adsr_init(&(voice->env), 0.0025f, 0.000025f, 0.00005f, 1.0f, 0.25f);
+	synth_adsr_init(&(voice->env), 0.25f, 0.0000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_saw, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_saw, 0.10f, 0.0f, freq * 0.51f,
+	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.30f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.30f, 0.0f, freq * 0.51f,
 			0.0f);
 	BSP_LED_Toggle(LED_ORANGE);
 }

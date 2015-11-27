@@ -235,9 +235,10 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 			fx->readPtr = &(fx->buf[0]);
 		}
 #endif
+		sumL = (sumL + sumR) / 2;
 		*ptr = sumL;
 		ptr++;
-		*ptr = sumR;
+		*ptr = sumL;
 		ptr++;
 #ifdef SYNTH_USE_DELAY
 		*(fx->writePtr) = ((sumL + sumR) >> fx->decay);
