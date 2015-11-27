@@ -17,6 +17,7 @@ static void initAudio(void);
 static void initSequencer(void);
 static void resumePlayback();
 static void pausePlayback();
+static void stopPlayback(void);
 static void playNoteInst1(Synth* synth, int8_t note, uint32_t tick);
 static void playNoteInst2(Synth* synth, int8_t note, uint32_t tick);
 static void updateAudioBuffer(Synth *synth);
@@ -74,11 +75,11 @@ void usbUserProcess(USBH_HandleTypeDef *usbHost, uint8_t eventID) {
 void midiApplication(void) {
 	switch (appState) {
 	case APP_READY:
-		USBH_MIDI_Receive(&hUSBHost, midiReceiveBuffer, MIDI_BUF_SIZE); // just once
+		USBH_MIDI_Receive(&hUSBHost, midiReceiveBuffer, MIDI_BUF_SIZE);
 		initAudio();
+		pausePlayback();
 		initSequencer();
 		appState = APP_RUNNING;
-		playbackState = PLAYBACK_PLAY;
 		break;
 	case APP_RUNNING:
 		if ((playbackState == PLAYBACK_PLAY)
@@ -91,6 +92,7 @@ void midiApplication(void) {
 	case APP_DISCONNECT:
 		appState = APP_IDLE;
 		playbackState = PLAYBACK_IDLE;
+		stopPlayback();
 		USBH_MIDI_Stop(&hUSBHost);
 		break;
 	default:
@@ -122,11 +124,11 @@ void processMidiPackets() {
 			if ((type & 0xf0) == 0xb0) {
 				switch (subtype) {
 				case MIDI_CC_STOP_BT:
-					BSP_LED_Off(LED_RED);
+					BSP_LED_Off(LED_ORANGE);
 					pausePlayback();
 					break;
 				case MIDI_CC_PLAY_BT:
-					BSP_LED_On(LED_RED);
+					BSP_LED_On(LED_ORANGE);
 					resumePlayback();
 					break;
 				default:
@@ -167,6 +169,11 @@ void pausePlayback(void) {
 	BSP_AUDIO_OUT_Pause();
 }
 
+void stopPlayback(void) {
+	playbackState = PLAYBACK_IDLE;
+	BSP_AUDIO_OUT_Stop(CODEC_PDWN_HW);
+}
+
 void updateAudioBuffer(Synth *synth) {
 	if (bufferState == BUFFER_OFFSET_HALF) {
 		int16_t *ptr = (int16_t*) &audioBuffer[0];
@@ -182,7 +189,7 @@ void updateAudioBuffer(Synth *synth) {
 }
 
 void playNoteInst1(Synth* synth, int8_t note, uint32_t tick) {
-	float freq = notes[note];
+	float freq = notes[note + 7];
 	SynthVoice *voice = synth_new_voice(synth);
 	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
@@ -193,7 +200,7 @@ void playNoteInst1(Synth* synth, int8_t note, uint32_t tick) {
 }
 
 void playNoteInst2(Synth* synth, int8_t note, uint32_t tick) {
-	float freq = notes[note] * 0.5f;
+	float freq = notes[note + 7] * 0.5f;
 	SynthVoice *voice = synth_new_voice(synth);
 	synth_adsr_init(&(voice->env), 0.25f, 0.0000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
@@ -205,8 +212,9 @@ void playNoteInst2(Synth* synth, int8_t note, uint32_t tick) {
 }
 
 void USBH_MIDI_ReceiveCallback(USBH_HandleTypeDef *phost) {
+	BSP_LED_Toggle(LED_ORANGE);
 	processMidiPackets();
-	USBH_MIDI_Receive(&hUSBHost, midiReceiveBuffer, MIDI_BUF_SIZE); // start a new reception
+	USBH_MIDI_Receive(&hUSBHost, midiReceiveBuffer, MIDI_BUF_SIZE);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
