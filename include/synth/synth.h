@@ -13,7 +13,7 @@
 #define INV_HALF_PI				(1.0f / HALF_PI)
 
 #define SAMPLERATE				44100
-#define SYNTH_POLYPHONY			5
+#define SYNTH_POLYPHONY			6
 #define AUDIO_BUFFER_SIZE		512
 #define ADSR_SCALE				32767.0f;
 #define DELAY_LENGTH			(uint32_t)(SAMPLERATE * 0.375f)

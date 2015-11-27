@@ -1,7 +1,7 @@
 #include "ex07/sequencer.h"
 #include "synth/synth.h"
 
-SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, float *notes,
+SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes,
 		uint16_t length, uint32_t ticks) {
 	track->fn = fn;
 	track->notes = notes;
@@ -15,8 +15,8 @@ SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, float *notes,
 void updateTrack(Synth *synth, SeqTrack *track, uint32_t tick) {
 	if (tick != track->lastNoteTick) {
 		if (!(tick % track->ticks)) {
-			float note = track->notes[track->currNote];
-			if (note > 0.0f) {
+			int8_t note = track->notes[track->currNote];
+			if (note >= 0) {
 				track->fn(synth, note, tick);
 			}
 			track->currNote = (track->currNote + 1) % track->length;
