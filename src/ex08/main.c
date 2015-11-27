@@ -157,11 +157,17 @@ void processMidiPackets() {
 				default:
 					if (subtype >= MIDI_CC_BT_S1 && subtype <= MIDI_CC_BT_S8) {
 						int8_t note = tracks[0]->notes[subtype - MIDI_CC_BT_S1];
-						if (note == -1) {
-							tracks[0]->notes[subtype - MIDI_CC_BT_S1] = tinymt32_generate_uint32(&rng) % 72;
-						} else {
-							tracks[0]->notes[subtype - MIDI_CC_BT_S1] = -1;
-						}
+						tracks[0]->notes[subtype - MIDI_CC_BT_S1] = (
+								(note == -1) ?
+										(tinymt32_generate_uint32(&rng) % 72) :
+										-1);
+					}
+					if (subtype >= MIDI_CC_BT_M1 && subtype <= MIDI_CC_BT_M8) {
+						int8_t note = tracks[1]->notes[subtype - MIDI_CC_BT_M1];
+						tracks[1]->notes[subtype - MIDI_CC_BT_M1] = (
+								(note == -1) ?
+										(tinymt32_generate_uint32(&rng) % 72) :
+										-1);
 					}
 					break;
 				}
@@ -236,8 +242,8 @@ void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	synth_adsr_init(&(voice->env), 0.25f, 0.0000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.30f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.30f, 0.0f, freq * 0.51f,
+	synth_osc_init(&(voice->osc[0]), synth_osc_saw, 0.30f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[1]), synth_osc_saw, 0.30f, 0.0f, freq * 0.51f,
 			0.0f);
 	//BSP_LED_Toggle(LED_ORANGE);
 }

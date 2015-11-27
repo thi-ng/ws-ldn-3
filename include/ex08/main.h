@@ -31,6 +31,15 @@
 #define MIDI_CC_BT_S7 38
 #define MIDI_CC_BT_S8 39
 
+#define MIDI_CC_BT_M1 48
+#define MIDI_CC_BT_M2 49
+#define MIDI_CC_BT_M3 50
+#define MIDI_CC_BT_M4 51
+#define MIDI_CC_BT_M5 52
+#define MIDI_CC_BT_M6 53
+#define MIDI_CC_BT_M7 54
+#define MIDI_CC_BT_M8 55
+
 #define MIDI_BUF_SIZE 64
 
 typedef enum {
