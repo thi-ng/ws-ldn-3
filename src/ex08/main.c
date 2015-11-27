@@ -26,18 +26,24 @@ static void updateAudioBuffer(Synth *synth);
 
 static Synth synth;
 static SeqTrack* tracks[2];
+static tinymt32_t rng;
 
-static int8_t notes1[16] = { 36, -1, 12, 12, -1, -1, -1, -1, 48, -1, 17, 12, -1,
-		-1, -1, 24 };
+static int8_t notes1[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+static int8_t notes2[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
-static int8_t notes2[16] = { 0, 12, 0, 12, 0, 12, 0, 12, 7, 19, 7, 19, 7, 19, 7,
-		19, };
+//static int8_t notes1[16] = { 36, -1, 12, 12, -1, -1, -1, -1, 48, -1, 17, 12, -1,
+//		-1, -1, 24 };
+
+//static int8_t notes2[16] = { 0, 12, 0, 12, 0, 12, 0, 12, 7, 19, 7, 19, 7, 19, 7,
+//		19, };
 
 int main(void) {
 	HAL_Init();
 
 	led_all_init();
 	SystemClock_Config();
+
+	tinymt32_init(&rng, 0xdeadbeef);
 
 	BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
 
@@ -149,6 +155,14 @@ void processMidiPackets() {
 					tracks[1]->ticks = (uint32_t) (100 + r * (1000 - 100));
 					break;
 				default:
+					if (subtype >= MIDI_CC_BT_S1 && subtype <= MIDI_CC_BT_S8) {
+						int8_t note = tracks[0]->notes[subtype - MIDI_CC_BT_S1];
+						if (note == -1) {
+							tracks[0]->notes[subtype - MIDI_CC_BT_S1] = tinymt32_generate_uint32(&rng) % 72;
+						} else {
+							tracks[0]->notes[subtype - MIDI_CC_BT_S1] = -1;
+						}
+					}
 					break;
 				}
 			}
@@ -170,10 +184,10 @@ void initAudio(void) {
 
 void initSequencer(void) {
 	tracks[0] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst1,
-			notes1, 16, 250);
+			notes1, 8, 250);
 
 	tracks[1] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst2,
-			notes2, 16, 500);
+			notes2, 8, 500);
 }
 
 void resumePlayback(void) {

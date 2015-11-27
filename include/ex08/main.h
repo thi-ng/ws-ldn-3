@@ -22,6 +22,15 @@
 #define MIDI_CC_KNOB1 16
 #define MIDI_CC_KNOB2 17
 
+#define MIDI_CC_BT_S1 32
+#define MIDI_CC_BT_S2 33
+#define MIDI_CC_BT_S3 34
+#define MIDI_CC_BT_S4 35
+#define MIDI_CC_BT_S5 36
+#define MIDI_CC_BT_S6 37
+#define MIDI_CC_BT_S7 38
+#define MIDI_CC_BT_S8 39
+
 #define MIDI_BUF_SIZE 64
 
 typedef enum {
