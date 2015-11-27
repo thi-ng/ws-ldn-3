@@ -5,7 +5,7 @@
 
 typedef struct SeqTrack SeqTrack;
 
-typedef void (*SeqTrackFn)(Synth *synth, int8_t note, uint32_t tick);
+typedef void (*SeqTrackFn)(Synth *synth, SeqTrack *track, int8_t note, uint32_t tick);
 
 struct SeqTrack {
 	SeqTrackFn fn;
@@ -14,6 +14,8 @@ struct SeqTrack {
 	uint16_t currNote;
 	uint32_t ticks;
 	uint32_t lastNoteTick;
+	float gain;
+	int8_t pitchBend;
 };
 
 SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes, uint16_t length, uint32_t ticks);

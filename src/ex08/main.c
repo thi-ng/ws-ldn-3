@@ -18,8 +18,10 @@ static void initSequencer(void);
 static void resumePlayback();
 static void pausePlayback();
 static void stopPlayback(void);
-static void playNoteInst1(Synth* synth, int8_t note, uint32_t tick);
-static void playNoteInst2(Synth* synth, int8_t note, uint32_t tick);
+static void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note,
+		uint32_t tick);
+static void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note,
+		uint32_t tick);
 static void updateAudioBuffer(Synth *synth);
 
 static Synth synth;
@@ -103,6 +105,7 @@ void midiApplication(void) {
 void processMidiPackets() {
 	uint8_t *ptr = midiReceiveBuffer;
 	midi_package_t packet;
+	float r;
 
 	uint16_t numPackets = USBH_MIDI_GetLastReceivedDataSize(&hUSBHost) >> 2;
 //	if (numPackets > 0) {
@@ -130,6 +133,20 @@ void processMidiPackets() {
 				case MIDI_CC_PLAY_BT:
 					BSP_LED_On(LED_ORANGE);
 					resumePlayback();
+					break;
+				case MIDI_CC_SLIDER1:
+					tracks[0]->pitchBend = (int8_t) val - 64;
+					break;
+				case MIDI_CC_SLIDER2:
+					tracks[1]->pitchBend = (int8_t) val - 64;
+					break;
+				case MIDI_CC_KNOB1:
+					r = (float) val / 127.0f;
+					tracks[0]->ticks = (uint32_t) (100 + r * (1000 - 100));
+					break;
+				case MIDI_CC_KNOB2:
+					r = (float) val / 127.0f;
+					tracks[1]->ticks = (uint32_t) (100 + r * (1000 - 100));
 					break;
 				default:
 					break;
@@ -188,8 +205,8 @@ void updateAudioBuffer(Synth *synth) {
 	}
 }
 
-void playNoteInst1(Synth* synth, int8_t note, uint32_t tick) {
-	float freq = notes[note + 7];
+void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
+	float freq = notes[note + 7] * powf(1.02, (float) track->pitchBend);
 	SynthVoice *voice = synth_new_voice(synth);
 	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
@@ -199,8 +216,8 @@ void playNoteInst1(Synth* synth, int8_t note, uint32_t tick) {
 	//BSP_LED_Toggle(LED_GREEN);
 }
 
-void playNoteInst2(Synth* synth, int8_t note, uint32_t tick) {
-	float freq = notes[note + 7] * 0.5f;
+void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
+	float freq = notes[note + 7] * powf(1.02, (float) track->pitchBend);
 	SynthVoice *voice = synth_new_voice(synth);
 	synth_adsr_init(&(voice->env), 0.25f, 0.0000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,

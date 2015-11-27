@@ -14,8 +14,13 @@
 #include "synth/scales.h"
 #include "synth/sequencer.h"
 
-#define MIDI_CC_PLAY_BT 45
-#define MIDI_CC_STOP_BT 46
+#define MIDI_CC_PLAY_BT 41
+#define MIDI_CC_STOP_BT 42
+#define MIDI_CC_SLIDER1 0
+#define MIDI_CC_SLIDER2 1
+
+#define MIDI_CC_KNOB1 16
+#define MIDI_CC_KNOB2 17
 
 #define MIDI_BUF_SIZE 64
 
