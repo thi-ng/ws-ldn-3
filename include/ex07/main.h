@@ -6,7 +6,6 @@
 #include "stm32f4xx_hal.h"
 #include "stm32f401_discovery.h"
 #include "stm32f401_discovery_audio.h"
-#include "stm32f401_discovery_accelerometer.h"
 #include "ex07/stm32f4xx_it.h"
 #include "clockconfig.h"
 #include "led.h"
