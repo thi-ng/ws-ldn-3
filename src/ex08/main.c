@@ -9,20 +9,23 @@ USBAppState usbAppState = USBH_USER_FS_INIT;
 uint8_t midiReceiveBuffer[MIDI_BUF_SIZE];
 uint8_t audioBuffer[AUDIO_BUFFER_SIZE];
 __IO DMABufferState bufferState = BUFFER_OFFSET_NONE;
+__IO uint32_t canReceive = 0;
 
 static void usbUserProcess(USBH_HandleTypeDef *pHost, uint8_t vId);
 static void midiApplication(void);
 static void processMidiPackets(void);
 static void initAudio(void);
 static void initSequencer(void);
-static void resumePlayback();
-static void pausePlayback();
+static void resumePlayback(void);
+static void rewindPlayback(void);
+static void pausePlayback(void);
 static void stopPlayback(void);
 static void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note,
 		uint32_t tick);
 static void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note,
 		uint32_t tick);
 static void updateAudioBuffer(Synth *synth);
+static void updateTempo(uint32_t ticks);
 
 static Synth synth;
 static SeqTrack* tracks[2];
@@ -98,6 +101,10 @@ void midiApplication(void) {
 			updateAllTracks(&synth, tracks, 2, tick);
 			updateAudioBuffer(&synth);
 		}
+		if (canReceive) {
+			canReceive = 0;
+			USBH_MIDI_Receive(&hUSBHost, midiReceiveBuffer, MIDI_BUF_SIZE);
+		}
 		break;
 	case APP_DISCONNECT:
 		appState = APP_IDLE;
@@ -116,44 +123,41 @@ void processMidiPackets() {
 	float r;
 
 	uint16_t numPackets = USBH_MIDI_GetLastReceivedDataSize(&hUSBHost) >> 2;
-//	if (numPackets > 0) {
-//		BSP_LED_On(LED_ORANGE);
-//	} else {
-//		BSP_LED_Off(LED_ORANGE);
-//	}
 	if (numPackets != 0) {
 		while (numPackets--) {
 			packet.cin_cable = *ptr++;
-			uint8_t type = *ptr++;
-			uint8_t subtype = *ptr++;
-			uint8_t val = *ptr++;
-
-			if (packet.cin_cable != 0) {
-				BSP_LED_On(LED_BLUE);
-			}
+			uint32_t type = *ptr++;
+			uint32_t subtype = *ptr++;
+			uint32_t val = *ptr++;
 
 			if ((type & 0xf0) == 0xb0) {
 				switch (subtype) {
-				case MIDI_CC_STOP_BT:
+				case MIDI_CC_BT_STOP:
 					BSP_LED_Off(LED_ORANGE);
 					pausePlayback();
 					break;
-				case MIDI_CC_PLAY_BT:
+				case MIDI_CC_BT_PLAY:
 					BSP_LED_On(LED_ORANGE);
 					resumePlayback();
 					break;
+				case MIDI_CC_BT_REWIND:
+					rewindPlayback();
+					break;
 				case MIDI_CC_SLIDER1:
-					tracks[0]->pitchBend = (int8_t) val - 64;
+					tracks[0]->pitchBend = (int32_t) val - 64;
 					break;
 				case MIDI_CC_SLIDER2:
-					tracks[1]->pitchBend = (int8_t) val - 64;
+					tracks[1]->pitchBend = (int32_t) val - 64;
 					break;
 				case MIDI_CC_KNOB1:
 					r = (float) val / 127.0f;
-					tracks[0]->ticks = (uint32_t) (100 + r * (1000 - 100));
+					tracks[0]->ticks = 150 + (uint32_t) (r * 850.0f);
+					updateTempo(tracks[0]->ticks);
 					break;
 				case MIDI_CC_KNOB2:
-					tracks[1]->ticks = tempoScale[val * 7 / 128] * tracks[0]->ticks;
+					tracks[1]->tempoScale =
+							tempoScale[((uint32_t) val * 7) >> 7];
+					updateTempo(tracks[0]->ticks);
 					break;
 				default:
 					if (subtype >= MIDI_CC_BT_S1 && subtype <= MIDI_CC_BT_S8) {
@@ -177,6 +181,13 @@ void processMidiPackets() {
 	}
 }
 
+void updateTempo(uint32_t ticks) {
+	tracks[1]->ticks = (uint32_t) (tracks[1]->tempoScale * ticks);
+	if (tracks[1]->ticks < 150) {
+		tracks[1]->ticks = 150;
+	}
+}
+
 void initAudio(void) {
 	if (BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 85, SAMPLERATE) != 0) {
 		Error_Handler();
@@ -191,15 +202,21 @@ void initAudio(void) {
 
 void initSequencer(void) {
 	tracks[0] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst1,
-			notes1, 8, 250);
+			notes1, 8, 250, 1.0f);
 
 	tracks[1] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst2,
-			notes2, 8, 500);
+			notes2, 8, 250, 2.0f);
 }
 
 void resumePlayback(void) {
+	rewindPlayback();
 	playbackState = PLAYBACK_RESUME;
 	BSP_AUDIO_OUT_Resume();
+}
+
+void rewindPlayback(void) {
+	tracks[0]->currNote = 0;
+	tracks[1]->currNote = 0;
 }
 
 void pausePlayback(void) {
@@ -232,7 +249,7 @@ void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.20f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.10f, 0.0f, freq, 0.0f);
 	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.10f, 0.0f, freq, 0.0f);
 	//BSP_LED_Toggle(LED_GREEN);
 }
@@ -243,8 +260,8 @@ void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	synth_adsr_init(&(voice->env), 0.25f, 0.0000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.15f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.15f, 0.0f, freq * 0.51f,
+	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.10f, 0.0f, freq * 0.51f,
 			0.0f);
 	//BSP_LED_Toggle(LED_ORANGE);
 }
@@ -252,7 +269,8 @@ void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 void USBH_MIDI_ReceiveCallback(USBH_HandleTypeDef *phost) {
 	BSP_LED_Toggle(LED_ORANGE);
 	processMidiPackets();
-	USBH_MIDI_Receive(&hUSBHost, midiReceiveBuffer, MIDI_BUF_SIZE);
+	canReceive = 1;
+	//USBH_MIDI_Receive(&hUSBHost, midiReceiveBuffer, MIDI_BUF_SIZE);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {

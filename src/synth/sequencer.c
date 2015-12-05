@@ -2,15 +2,16 @@
 #include "synth/synth.h"
 
 SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes,
-		uint16_t length, uint32_t ticks) {
+		uint16_t length, uint32_t ticks, float tempoScale) {
 	track->fn = fn;
 	track->notes = notes;
 	track->length = length;
-	track->ticks = ticks;
+	track->ticks = (uint32_t) (ticks * tempoScale);
 	track->currNote = 0;
 	track->lastNoteTick = 0xffffffff;
 	track->gain = 1.0f;
 	track->pitchBend = 0;
+	track->tempoScale = tempoScale;
 	return track;
 }
 

@@ -25,6 +25,12 @@ float synth_osc_sin(SynthOsc *osc, float lfo, float lfo2) {
 	return WTABLE_LOOKUP(wtable_sin, phase) * osc->amp;
 }
 
+float synth_osc_sin_math(SynthOsc *osc, float lfo, float lfo2) {
+	float phase = truncPhase(osc->phase + osc->freq + lfo);
+	osc->phase = phase;
+	return sinf(phase) * osc->amp;
+}
+
 float synth_osc_sin_dc(SynthOsc *osc, float lfo, float lfo2) {
 	float phase = truncPhase(osc->phase + osc->freq + lfo);
 	osc->phase = phase;
@@ -89,7 +95,8 @@ float synth_osc_wtable_morph(SynthOsc *osc, float lfo, float morph) {
 	float phase = truncPhase(osc->phase + osc->freq + lfo);
 	truncPhase(phase);
 	osc->phase = phase;
-	return mixf(WTABLE_LOOKUP(osc->wtable1, phase), WTABLE_LOOKUP(osc->wtable2, phase), morph) * osc->amp;
+	return mixf(WTABLE_LOOKUP(osc->wtable1, phase),
+			WTABLE_LOOKUP(osc->wtable2, phase), morph) * osc->amp;
 }
 
 float synth_osc_noise(SynthOsc *osc, float lfo, float lfo2) {
@@ -127,6 +134,9 @@ float synth_adsr_update(ADSR *env, float envMod) {
 			env->phase = DECAY;
 		} else {
 			env->currGain += env->attackRate * envMod;
+			if (env->currGain > ADSR_SCALE) {
+				env->currGain = ADSR_SCALE;
+			}
 		}
 		break;
 	case DECAY:
@@ -139,7 +149,7 @@ float synth_adsr_update(ADSR *env, float envMod) {
 	case SUSTAIN:
 		return env->sustainGain;
 	case RELEASE:
-		if (env->currGain > 0.0f) {
+		if (env->currGain > 3e-5f) { // ~0.98 in 16bit
 			env->currGain -= env->releaseRate;
 			if (env->currGain < 0.0f) {
 				env->currGain = 0.0f;
@@ -157,6 +167,7 @@ float synth_adsr_update(ADSR *env, float envMod) {
 void synth_voice_init(SynthVoice *voice, uint32_t flags) {
 	synth_osc_init(&(voice->lfoPitch), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
 	synth_osc_init(&(voice->lfoMorph), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
+	voice->age = 0;
 	voice->flags = flags;
 }
 
@@ -175,12 +186,19 @@ void synth_init(Synth *synth) {
 }
 
 SynthVoice* synth_new_voice(Synth *synth) {
-	SynthVoice* voice = &(synth->voices[synth->nextVoice]);
-	synth_voice_init(voice, 0);
-	synth->nextVoice++;
-	if (synth->nextVoice == SYNTH_POLYPHONY) {
-		synth->nextVoice = 0;
+	SynthVoice* voice = NULL;
+	uint32_t maxAge = 0;
+	for (uint32_t i = 0; i < SYNTH_POLYPHONY; i++) {
+		if (synth->voices[i].env.phase == IDLE) {
+			voice = &synth->voices[i];
+			break;
+		}
+		if (synth->voices[i].age > maxAge) {
+			voice = &synth->voices[i];
+			maxAge = synth->voices[i].age;
+		}
 	}
+	synth_voice_init(voice, 0);
 	return voice;
 }
 
@@ -199,7 +217,7 @@ void synth_bus_init(SynthFXBus *bus, int16_t *buf, size_t len, uint8_t decay) {
 }
 
 void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
-	int16_t sumL, sumR;
+	int32_t sumL, sumR;
 	SynthOsc *lfoEnvMod = &(synth->lfoEnvMod);
 	SynthFXBus *fx = &(synth->bus[0]);
 	while (len--) {
@@ -207,6 +225,7 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 		float envMod = lfoEnvMod->fn(lfoEnvMod, 0.0f, 0.0f);
 		SynthVoice *voice = &(synth->voices[SYNTH_POLYPHONY - 1]);
 		while (voice >= synth->voices) {
+			voice->age++;
 			ADSR *env = &(voice->env);
 			if (env->phase) {
 				float gain = synth_adsr_update(env, envMod);
@@ -215,10 +234,10 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 				osc = &(voice->lfoMorph);
 				float lfoVMorphVal = osc->fn(osc, 0.0f, 0.0f);
 				osc = &(voice->osc[0]);
-				sumL += (int16_t) (gain
+				sumL += (int32_t) (gain
 						* osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
 				osc++;
-				sumR += (int16_t) (gain
+				sumR += (int32_t) (gain
 						* osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
 			}
 			voice--;
@@ -235,13 +254,13 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 			fx->readPtr = &(fx->buf[0]);
 		}
 #endif
-		sumL = (sumL + sumR) / 2;
+		//sumL = (sumL + sumR) >> 1;
 		*ptr = sumL;
 		ptr++;
-		*ptr = sumL;
+		*ptr = sumR;
 		ptr++;
 #ifdef SYNTH_USE_DELAY
-		*(fx->writePtr) = ((sumL + sumR) >> fx->decay);
+		*(fx->writePtr) = clamp16((sumL + sumR) >> fx->decay);
 		fx->writePtr++;
 		fx->writePos++;
 		if (fx->writePos >= fx->len) {

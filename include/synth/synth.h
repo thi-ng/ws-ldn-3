@@ -13,11 +13,19 @@
 #define INV_HALF_PI				(1.0f / HALF_PI)
 
 #define SAMPLERATE				44100
-#define SYNTH_POLYPHONY			4
+
+#ifndef SYNTH_POLYPHONY
+#define SYNTH_POLYPHONY			6
+#endif
+
+#ifndef AUDIO_BUFFER_SIZE
 #define AUDIO_BUFFER_SIZE		512
-#define ADSR_SCALE				32767.0f;
-#define DELAY_LENGTH			(uint32_t)(SAMPLERATE * 0.375f)
+#endif
+
+#define ADSR_SCALE				32767.0f
+
 //#define SYNTH_USE_DELAY
+#define DELAY_LENGTH			(uint32_t)(SAMPLERATE * 0.375f)
 
 #define FREQ_TO_RAD(freq)		((TAU * (freq)) / (float)SAMPLERATE)
 
@@ -85,6 +93,7 @@ typedef struct {
 	SynthOsc lfoMorph;
 	ADSR env;
 	uint32_t flags;
+	uint32_t age;
 } SynthVoice;
 
 typedef struct {
@@ -107,22 +116,23 @@ typedef struct {
 	uint8_t nextVoice;
 } Synth;
 
-void		synth_osc_init(SynthOsc *osc, OscFn fn, float gain, float phase, float freq, float dc);
-void		synth_osc_set_wavetables(SynthOsc *osc, const float *tbl1, const float *tbl2);
-float		synth_osc_sin(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_sin_dc(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_sin2(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_rect(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_rect_phase(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_rect_dc(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_saw(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_saw_dc(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_tri(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_noise(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_nop(SynthOsc *osc, float lfo, float lfo2);
-float		synth_osc_wtable_morph(SynthOsc *osc, float lfo, float lfo2);
+void	synth_osc_init(SynthOsc *osc, OscFn fn, float gain, float phase, float freq, float dc);
+void	synth_osc_set_wavetables(SynthOsc *osc, const float *tbl1, const float *tbl2);
+float	synth_osc_sin(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_sin_math(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_sin_dc(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_sin2(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_rect(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_rect_phase(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_rect_dc(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_saw(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_saw_dc(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_tri(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_noise(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_nop(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_wtable_morph(SynthOsc *osc, float lfo, float lfo2);
 
 void		synth_adsr_init(ADSR *env, float attRate, float decayRate, float releaseRate, float attGain, float sustainGain);
 float		synth_adsr_update(ADSR *env, float envMod);
