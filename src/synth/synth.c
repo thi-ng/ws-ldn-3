@@ -91,12 +91,20 @@ float synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2) {
 	}
 }
 
+float synth_osc_wtable_simple(SynthOsc *osc, float lfo, float lfo2) {
+	float phase = truncPhase(osc->phase + osc->freq + lfo);
+	truncPhase(phase);
+	osc->phase = phase;
+	return WTABLE_LOOKUP(osc->wtable1, phase) * osc->amp;
+}
+
 float synth_osc_wtable_morph(SynthOsc *osc, float lfo, float morph) {
 	float phase = truncPhase(osc->phase + osc->freq + lfo);
 	truncPhase(phase);
 	osc->phase = phase;
-	return mixf(WTABLE_LOOKUP(osc->wtable1, phase),
-			WTABLE_LOOKUP(osc->wtable2, phase), morph) * osc->amp;
+	uint32_t idx = WTABLE_INDEX(phase);
+	return mixf(WTABLE_LOOKUP_RAW(osc->wtable1, idx),
+			WTABLE_LOOKUP_RAW(osc->wtable2, idx), morph) * osc->amp;
 }
 
 float synth_osc_noise(SynthOsc *osc, float lfo, float lfo2) {

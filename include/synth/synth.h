@@ -19,7 +19,7 @@
 #endif
 
 #ifndef AUDIO_BUFFER_SIZE
-#define AUDIO_BUFFER_SIZE		512
+#define AUDIO_BUFFER_SIZE		256
 #endif
 
 #define ADSR_SCALE				32767.0f
@@ -132,6 +132,7 @@ float	synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2);
 float	synth_osc_noise(SynthOsc *osc, float lfo, float lfo2);
 float	synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2);
 float	synth_osc_nop(SynthOsc *osc, float lfo, float lfo2);
+float	synth_osc_wtable_simple(SynthOsc *osc, float lfo, float lfo2);
 float	synth_osc_wtable_morph(SynthOsc *osc, float lfo, float lfo2);
 
 void		synth_adsr_init(ADSR *env, float attRate, float decayRate, float releaseRate, float attGain, float sustainGain);
