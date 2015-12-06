@@ -18,6 +18,8 @@ struct SeqTrack {
 	int32_t direction;
 	float gain;
 	float tempoScale;
+	float cutoff;
+	float resonance;
 };
 
 SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes, uint16_t length, uint32_t ticks, float tempoScale);
