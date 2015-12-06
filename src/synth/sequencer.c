@@ -12,6 +12,7 @@ SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes,
 	track->gain = 1.0f;
 	track->pitchBend = 0;
 	track->tempoScale = tempoScale;
+	track->direction = 1;
 	return track;
 }
 
@@ -22,7 +23,10 @@ void updateTrack(Synth *synth, SeqTrack *track, uint32_t tick) {
 			if (note >= 0) {
 				track->fn(synth, track, note, tick);
 			}
-			track->currNote = (track->currNote + 1) % track->length;
+			track->currNote = (track->currNote + track->direction) % track->length;
+			if (track->currNote < 0) {
+				track->currNote = track->length - 1;
+			}
 			track->lastNoteTick = tick;
 		}
 	}

@@ -11,10 +11,11 @@ struct SeqTrack {
 	SeqTrackFn fn;
 	int8_t *notes;
 	uint16_t length;
-	uint16_t currNote;
+	int16_t currNote;
 	uint32_t ticks;
 	uint32_t lastNoteTick;
 	int32_t pitchBend;
+	int32_t direction;
 	float gain;
 	float tempoScale;
 };
