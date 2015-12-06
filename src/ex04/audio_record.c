@@ -1,8 +1,6 @@
 #include "ex04/audio_record.h"
 #include <string.h>
 
-#define AUDIO_BUFFER_SIZE 8192
-
 #define PCM_SIZE2 (2 * PCM_OUT_SIZE)
 #define PCM_SIZE4 (4 * PCM_OUT_SIZE)
 
