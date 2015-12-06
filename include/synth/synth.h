@@ -13,6 +13,7 @@
 #define INV_HALF_PI				(1.0f / HALF_PI)
 
 #define SAMPLERATE				44100
+#define INV_NYQUIST_FREQ		(2.0f / (float)SAMPLERATE)
 
 #ifndef SYNTH_POLYPHONY
 #define SYNTH_POLYPHONY			6
@@ -87,11 +88,27 @@ typedef struct {
 	ADSRPhase phase;
 } ADSR;
 
+typedef enum {
+  IIR_LP = 0, IIR_HP, IIR_BP, IIR_BR
+} IIRType;
+
+typedef struct {
+  float* src;
+  float* lfo;
+  float f[4];
+  float cutoff;
+  float resonance;
+  float freq;
+  float damp;
+  IIRType type;
+} IIRState;
+
 typedef struct {
 	SynthOsc osc[2];
 	SynthOsc lfoPitch;
 	SynthOsc lfoMorph;
 	ADSR env;
+	IIRState filter[2];
 	uint32_t flags;
 	uint32_t age;
 } SynthVoice;
@@ -145,5 +162,9 @@ void		synth_init(Synth *synth);
 
 SynthVoice*	synth_new_voice(Synth *synth);
 void		synth_render_slice(Synth *synth, int16_t *ptr, size_t len);
+
+void synth_init_iir(IIRState *state, IIRType type, float cutoff, float reso);
+void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso);
+float synth_process_iir(IIRState *state, float input, float env);
 
 #endif

@@ -175,6 +175,8 @@ float synth_adsr_update(ADSR *env, float envMod) {
 void synth_voice_init(SynthVoice *voice, uint32_t flags) {
 	synth_osc_init(&(voice->lfoPitch), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
 	synth_osc_init(&(voice->lfoMorph), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
+	synth_init_iir(&(voice->filter[0]), IIR_HP, 0.0f, 0.85f);
+	synth_init_iir(&(voice->filter[1]), IIR_HP, 0.0f, 0.85f);
 	voice->age = 0;
 	voice->flags = flags;
 }
@@ -224,6 +226,41 @@ void synth_bus_init(SynthFXBus *bus, int16_t *buf, size_t len, uint8_t decay) {
 	memset(buf, 0, len << 1);
 }
 
+void synth_init_iir(IIRState *state, IIRType type, float cutoff, float reso) {
+	state->f[0] = 0.0f; // lp
+	state->f[1] = 0.0f; // hp
+	state->f[2] = 0.0f; // bp
+	state->f[3] = 0.0f; // br
+	state->type = type;
+	synth_set_iir_coeff(state, cutoff, reso);
+}
+
+void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso) {
+	iir->cutoff = cutoff;
+	iir->resonance = reso;
+	iir->freq = 2.0f * sinf(PI * fminf(0.5f, cutoff * INV_NYQUIST_FREQ));
+	iir->damp = fminf(2.0f * (1.0f - powf(reso, 0.25f)),
+			fminf(2.0f, 2.0f / iir->freq - iir->freq * 0.5f));
+}
+
+float synth_process_iir(IIRState *state, float input, float env) {
+	float *f = state->f;
+	// 1st pass
+	f[3] = input - state->damp * f[2];
+	f[0] = f[0] + state->freq * f[2];
+	f[1] = f[3] - f[0];
+	f[2] = state->freq * f[1] + f[2];
+	float output = f[state->type];
+
+	// 2nd pass
+	f[3] = input - state->damp * f[2];
+	f[0] = f[0] + state->freq * f[2];
+	f[1] = f[3] - f[0];
+	f[2] = state->freq * f[1] + f[2];
+	output = 0.5f * (output + f[state->type]);
+	return (input + (output - input) * env);
+}
+
 void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 	int32_t sumL, sumR;
 	SynthOsc *lfoEnvMod = &(synth->lfoEnvMod);
@@ -242,11 +279,13 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 				osc = &(voice->lfoMorph);
 				float lfoVMorphVal = osc->fn(osc, 0.0f, 0.0f);
 				osc = &(voice->osc[0]);
-				sumL += (int32_t) (gain
-						* osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
+				float val = osc->fn(osc, lfoVPitchVal, lfoVMorphVal);
+				val = synth_process_iir(&(voice->filter[0]), val, 1.0f);
+				sumL += (int32_t) (gain * val);
 				osc++;
-				sumR += (int32_t) (gain
-						* osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
+				val = osc->fn(osc, lfoVPitchVal, lfoVMorphVal);
+				val = synth_process_iir(&(voice->filter[1]), val, 1.0f);
+				sumR += (int32_t) (gain * val);
 			}
 			voice--;
 		}
