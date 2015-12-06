@@ -1,5 +1,7 @@
 #include "ex08/main.h"
 
+#define NUM_USER_FNS 2
+
 AppState appState = APP_IDLE;
 __IO PlaybackState playbackState = PLAYBACK_IDLE;
 
@@ -20,27 +22,24 @@ static void resumePlayback(void);
 static void rewindPlayback(void);
 static void pausePlayback(void);
 static void stopPlayback(void);
-static void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note,
+static void playNote(Synth* synth, SeqTrack *track, int8_t note,
 		uint32_t tick);
-static void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note,
-		uint32_t tick);
+static void trackOscRect(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick);
+static void trackOscWavetable1(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick);
+
 static void updateAudioBuffer(Synth *synth);
 static void updateTempo(uint32_t ticks);
+static void changeTrackUserFn(int32_t id);
 
 static Synth synth;
 static SeqTrack* tracks[2];
 static tinymt32_t rng;
 
-static float tempoScale[] = { 0.25f, 0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 4.0f };
-
 static int8_t notes1[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 static int8_t notes2[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
-//static int8_t notes1[16] = { 36, -1, 12, 12, -1, -1, -1, -1, 48, -1, 17, 12, -1,
-//		-1, -1, 24 };
-
-//static int8_t notes2[16] = { 0, 12, 0, 12, 0, 12, 0, 12, 7, 19, 7, 19, 7, 19, 7,
-//		19, };
+static SeqTrackUserFn userFns[] = { trackOscRect, trackOscWavetable1 };
+__IO static int32_t userFnID = 0;
 
 int main(void) {
 	HAL_Init();
@@ -119,13 +118,11 @@ void midiApplication(void) {
 
 void processMidiPackets() {
 	uint8_t *ptr = midiReceiveBuffer;
-	midi_package_t packet;
-	float r;
-
+	//midi_package_t packet;
 	uint16_t numPackets = USBH_MIDI_GetLastReceivedDataSize(&hUSBHost) >> 2;
 	if (numPackets != 0) {
 		while (numPackets--) {
-			packet.cin_cable = *ptr++;
+			uint32_t cin_cable = *ptr++;
 			uint32_t type = *ptr++;
 			uint32_t subtype = *ptr++;
 			uint32_t val = *ptr++;
@@ -142,6 +139,12 @@ void processMidiPackets() {
 					break;
 				case MIDI_CC_BT_REWIND:
 					rewindPlayback();
+					break;
+				case MIDI_CC_BT_LEFT:
+					changeTrackUserFn(-1);
+					break;
+				case MIDI_CC_BT_RIGHT:
+					changeTrackUserFn(1);
 					break;
 				case MIDI_CC_SLIDER1:
 					tracks[0]->cutoff = 240.f + ((float)val)/127.0f*4890.0f;
@@ -192,6 +195,15 @@ void updateTempo(uint32_t ticks) {
 	}
 }
 
+void changeTrackUserFn(int32_t id) {
+	userFnID = (userFnID + id) % NUM_USER_FNS;
+	if (userFnID < 0) {
+		userFnID = NUM_USER_FNS - 1;
+	}
+	tracks[0]->userFn = userFns[userFnID];
+	tracks[1]->userFn = userFns[userFnID];
+}
+
 void initAudio(void) {
 	if (BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 85, SAMPLERATE) != 0) {
 		Error_Handler();
@@ -205,11 +217,11 @@ void initAudio(void) {
 }
 
 void initSequencer(void) {
-	tracks[0] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst1,
+	tracks[0] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNote,
 			notes1, 8, 250, 1.0f);
-
-	tracks[1] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst2,
+	tracks[1] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNote,
 			notes2, 8, 250, 2.0f);
+	changeTrackUserFn(0);
 }
 
 void resumePlayback(void) {
@@ -247,7 +259,7 @@ void updateAudioBuffer(Synth *synth) {
 	}
 }
 
-void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
+void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	float freq = notes[note] * powf(1.02, (float) track->pitchBend);
 	SynthVoice *voice = synth_new_voice(synth);
 	(&voice->filter[0])->type=IIR_LP;
@@ -257,25 +269,19 @@ void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
-	//BSP_LED_Toggle(LED_GREEN);
+	track->userFn(track, voice, freq, tick);
 }
 
-void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
-	float freq = notes[note] * powf(1.02, (float) track->pitchBend);
-	SynthVoice *voice = synth_new_voice(synth);
-	(&voice->filter[0])->type=IIR_LP;
-	(&voice->filter[1])->type=IIR_LP;
-	synth_set_iir_coeff(&voice->filter[0], track->cutoff, track->resonance);
-	synth_set_iir_coeff(&voice->filter[1], track->cutoff, track->resonance);
-	synth_adsr_init(&(voice->env), 0.25f, 0.0000025f, 0.005f, 1.0f, 0.95f);
-	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
-			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_saw, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_saw, 0.10f, 0.0f, freq * 0.51f,
-			0.0f);
-	//BSP_LED_Toggle(LED_ORANGE);
+void trackOscRect(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick) {
+	synth_osc_init(&(voice->osc[0]), synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[1]), synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
+}
+
+void trackOscWavetable1(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick) {
+	synth_osc_init(&(voice->osc[0]), synth_osc_wtable_morph, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_set_wavetables(&(voice->osc[0]), wtable_sin_exp2, wtable_sin_pow2);
+	synth_osc_init(&(voice->osc[1]), synth_osc_wtable_morph, 0.10f, 0.0f, freq * 0.5f, 0.0f);
+	synth_osc_set_wavetables(&(voice->osc[1]), wtable_sin_exp2, wtable_super_saw);
 }
 
 void USBH_MIDI_ReceiveCallback(USBH_HandleTypeDef *phost) {

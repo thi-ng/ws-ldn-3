@@ -17,6 +17,8 @@
 #define MIDI_CC_BT_PLAY 41
 #define MIDI_CC_BT_STOP 42
 #define MIDI_CC_BT_REWIND 43
+#define MIDI_CC_BT_LEFT 61
+#define MIDI_CC_BT_RIGHT 62
 
 #define MIDI_CC_SLIDER1 0
 #define MIDI_CC_SLIDER2 1

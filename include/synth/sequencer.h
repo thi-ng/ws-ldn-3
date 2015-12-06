@@ -6,9 +6,11 @@
 typedef struct SeqTrack SeqTrack;
 
 typedef void (*SeqTrackFn)(Synth *synth, SeqTrack *track, int8_t note, uint32_t tick);
+typedef void (*SeqTrackUserFn)(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick);
 
 struct SeqTrack {
 	SeqTrackFn fn;
+	SeqTrackUserFn userFn;
 	int8_t *notes;
 	uint16_t length;
 	int16_t currNote;
@@ -20,6 +22,7 @@ struct SeqTrack {
 	float tempoScale;
 	float cutoff;
 	float resonance;
+
 };
 
 SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes, uint16_t length, uint32_t ticks, float tempoScale);
