@@ -144,27 +144,31 @@ void processMidiPackets() {
 					rewindPlayback();
 					break;
 				case MIDI_CC_SLIDER1:
-					tracks[0]->pitchBend = (int32_t) val - 64;
+					tracks[0]->cutoff = 240.f + ((float)val)/127.0f*4890.0f;
 					break;
 				case MIDI_CC_SLIDER2:
-					tracks[1]->pitchBend = (int32_t) val - 64;
+					tracks[1]->cutoff = 240.0f + ((float)val)/127.0f*4890.0f;
 					break;
 				case MIDI_CC_KNOB1:
-					r = (float) val / 127.0f;
-					tracks[0]->ticks = 150 + (uint32_t) (r * 850.0f);
-					updateTempo(tracks[0]->ticks);
-					break;
+//					r = (float) val / 127.0f;
+//					tracks[0]->ticks = 150 + (uint32_t) (r * 850.0f);
+//					updateTempo(tracks[0]->ticks);
+//					break;
+					tracks[0]->resonance = 0.95f * (float)(val/127.0f);
+
 				case MIDI_CC_KNOB2:
-					tracks[1]->tempoScale =
-							tempoScale[((uint32_t) val * 7) >> 7];
-					updateTempo(tracks[0]->ticks);
-					break;
+//					tracks[1]->tempoScale =
+//							tempoScale[((uint32_t) val * 7) >> 7];
+//					updateTempo(tracks[0]->ticks);
+//					break;
+					tracks[1]->resonance = 0.95f * (float)val/127.0f;
+
 				default:
 					if (subtype >= MIDI_CC_BT_S1 && subtype <= MIDI_CC_BT_S8) {
 						int8_t note = tracks[0]->notes[subtype - MIDI_CC_BT_S1];
 						tracks[0]->notes[subtype - MIDI_CC_BT_S1] = (
 								(note == -1) ?
-										(tinymt32_generate_uint32(&rng) % 72) :
+										(tinymt32_generate_uint32(&rng) % 48) :
 										-1);
 					}
 					if (subtype >= MIDI_CC_BT_M1 && subtype <= MIDI_CC_BT_M8) {
@@ -244,24 +248,32 @@ void updateAudioBuffer(Synth *synth) {
 }
 
 void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
-	float freq = notes[note + 7] * powf(1.02, (float) track->pitchBend);
+	float freq = notes[note] * powf(1.02, (float) track->pitchBend);
 	SynthVoice *voice = synth_new_voice(synth);
+	(&voice->filter[0])->type=IIR_LP;
+	(&voice->filter[1])->type=IIR_LP;
+	synth_set_iir_coeff(&voice->filter[0], track->cutoff, track->resonance);
+	synth_set_iir_coeff(&voice->filter[1], track->cutoff, track->resonance);
 	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[0]), synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[1]), synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
 	//BSP_LED_Toggle(LED_GREEN);
 }
 
 void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
-	float freq = notes[note + 7] * powf(1.02, (float) track->pitchBend);
+	float freq = notes[note] * powf(1.02, (float) track->pitchBend);
 	SynthVoice *voice = synth_new_voice(synth);
+	(&voice->filter[0])->type=IIR_LP;
+	(&voice->filter[1])->type=IIR_LP;
+	synth_set_iir_coeff(&voice->filter[0], track->cutoff, track->resonance);
+	synth_set_iir_coeff(&voice->filter[1], track->cutoff, track->resonance);
 	synth_adsr_init(&(voice->env), 0.25f, 0.0000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_sin, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_sin, 0.10f, 0.0f, freq * 0.51f,
+	synth_osc_init(&(voice->osc[0]), synth_osc_saw, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(&(voice->osc[1]), synth_osc_saw, 0.10f, 0.0f, freq * 0.51f,
 			0.0f);
 	//BSP_LED_Toggle(LED_ORANGE);
 }

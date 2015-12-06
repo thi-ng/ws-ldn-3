@@ -239,7 +239,7 @@ void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso) {
 	iir->cutoff = cutoff;
 	iir->resonance = reso;
 	iir->freq = 2.0f * sinf(PI * fminf(0.5f, cutoff * INV_NYQUIST_FREQ));
-	iir->damp = fminf(2.0f * (1.0f - powf(reso, 0.25f)),
+	iir->damp = fminf(2.0f * (1.0f - powf(reso, 0.05f)),
 			fminf(2.0f, 2.0f / iir->freq - iir->freq * 0.5f));
 }
 

@@ -13,6 +13,8 @@ SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes,
 	track->pitchBend = 0;
 	track->tempoScale = tempoScale;
 	track->direction = 1;
+	track->cutoff = 1000;
+	track->resonance = 0.5;
 	return track;
 }
 
