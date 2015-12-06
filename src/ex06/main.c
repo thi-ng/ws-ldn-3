@@ -64,8 +64,8 @@ void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	float fcutoff = 1000.0f + 500.0f * sinf(tick * 0.0015f);
 	float fresonance = 0.55f + 0.30f * sinf(tick * 0.0007f);
 
-	synth_set_iir_coeff(&voice->filter[0], fcutoff, fresonance);
-	synth_set_iir_coeff(&voice->filter[1], fcutoff, fresonance);
+	synth_set_iir_coeff(&voice->filter[0], fcutoff, fresonance, 0.25f);
+	synth_set_iir_coeff(&voice->filter[1], fcutoff, fresonance, 0.25f);
 	synth_adsr_init(&(voice->env), tinymt32_generate_float01(&rng) * 0.025f,
 			0.00015f, 0.00005f, 1.0f, 0.5f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(2.0f), 0.0f,

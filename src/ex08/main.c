@@ -154,13 +154,16 @@ void processMidiPackets() {
 					break;
 				case MIDI_CC_KNOB1:
 					tracks[0]->resonance = 0.95f * (float)(val/127.0f);
+					break;
 
 				case MIDI_CC_KNOB2:
 					tracks[1]->resonance = 0.95f * (float)val/127.0f;
+					break;
 
 				case MIDI_CC_KNOB3:
 					tracks[0]->damping = 0.05+0.9 * (float)val/127.0f;
 					tracks[1]->damping = 0.05+0.9 * (float)val/127.0f;
+					break;
 
 				default:
 					if (subtype >= MIDI_CC_BT_S1 && subtype <= MIDI_CC_BT_S8) {

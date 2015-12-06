@@ -226,16 +226,18 @@ void synth_bus_init(SynthFXBus *bus, int16_t *buf, size_t len, uint8_t decay) {
 	memset(buf, 0, len << 1);
 }
 
-void synth_init_iir(IIRState *state, IIRType type, float cutoff, float reso, float damping) {
-	state->f[0] = 0.0f; // lp
-	state->f[1] = 0.0f; // hp
-	state->f[2] = 0.0f; // bp
-	state->f[3] = 0.0f; // br
+void synth_init_iir(FilterState *state, FilterType type, float cutoff,
+		float reso, float damping) {
+	state->f[0] = state->g[0] = 0.0f; // lp
+	state->f[1] = state->g[1] = 0.0f; // hp
+	state->f[2] = state->g[2] = 0.0f; // bp
+	state->f[3] = state->g[3] = 0.0f; // br
 	state->type = type;
 	synth_set_iir_coeff(state, cutoff, reso, damping);
 }
 
-void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso, float damping) {
+void synth_set_iir_coeff(FilterState *iir, float cutoff, float reso,
+		float damping) {
 	iir->cutoff = cutoff;
 	iir->resonance = reso;
 	iir->freq = 2.0f * sinf(PI * fminf(0.5f, cutoff * INV_NYQUIST_FREQ));
@@ -243,7 +245,7 @@ void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso, float damping)
 			fminf(2.0f, 2.0f / iir->freq - iir->freq * 0.5f));
 }
 
-float synth_process_iir(IIRState *state, float input, float env) {
+float synth_process_iir(FilterState *state, float input, float env) {
 	float *f = state->f;
 	// 1st pass
 	f[3] = input - state->damp * f[2];
@@ -261,59 +263,84 @@ float synth_process_iir(IIRState *state, float input, float env) {
 	return (input + (output - input) * env);
 }
 
-void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
-	int32_t sumL, sumR;
-	SynthOsc *lfoEnvMod = &(synth->lfoEnvMod);
-	SynthFXBus *fx = &(synth->bus[0]);
-	while (len--) {
-		sumL = sumR = 0;
-		float envMod = lfoEnvMod->fn(lfoEnvMod, 0.0f, 0.0f);
-		SynthVoice *voice = &(synth->voices[SYNTH_POLYPHONY - 1]);
-		while (voice >= synth->voices) {
-			voice->age++;
-			ADSR *env = &(voice->env);
-			if (env->phase) {
-				float gain = synth_adsr_update(env, envMod);
-				SynthOsc *osc = &(voice->lfoPitch);
-				float lfoVPitchVal = osc->fn(osc, 0.0f, 0.0f);
-				osc = &(voice->lfoMorph);
-				float lfoVMorphVal = osc->fn(osc, 0.0f, 0.0f);
-				osc = &(voice->osc[0]);
-				float val = osc->fn(osc, lfoVPitchVal, lfoVMorphVal);
-				val = synth_process_iir(&(voice->filter[0]), val, 1.0f);
-				sumL += (int32_t) (gain * val);
-				osc++;
-				val = osc->fn(osc, lfoVPitchVal, lfoVMorphVal);
-				val = synth_process_iir(&(voice->filter[1]), val, 1.0f);
-				sumR += (int32_t) (gain * val);
-			}
-			voice--;
-		}
-		sumL += *(fx->readPtr);
-		clamp16(sumL);
-		sumR += *(fx->readPtr);
-		clamp16(sumR);
-#ifdef SYNTH_USE_DELAY
-		fx->readPtr++;
-		fx->readPos++;
-		if (fx->readPos >= fx->len) {
-			fx->readPos = 0;
-			fx->readPtr = &(fx->buf[0]);
-		}
-#endif
-		//sumL = (sumL + sumR) >> 1;
-		*ptr = sumL;
-		ptr++;
-		*ptr = sumR;
-		ptr++;
-#ifdef SYNTH_USE_DELAY
-		*(fx->writePtr) = clamp16((sumL + sumR) >> fx->decay);
-		fx->writePtr++;
-		fx->writePos++;
-		if (fx->writePos >= fx->len) {
-			fx->writePos = 0;
-			fx->writePtr = &(fx->buf[0]);
-		}
-#endif
+float synth_process_4pole(FilterState *state, float input) {
+	float f = 10.0f * state->cutoff * INV_NYQUIST_FREQ;
+	if (f > 1.0f) {
+		f = 1.0f;
 	}
+	float ff = f * f;
+	input -= state->g[3] * state->resonance * (1.0f - 0.15f * ff);
+	input *= 0.35013f * ff * ff;
+
+	ff = 1.0f - f;
+
+	state->g[0] = input + 0.3f * state->f[0] + ff * state->g[0];
+	state->g[1] = state->g[0] + 0.3f * state->f[1] + ff * state->g[1];
+	state->g[2] = state->g[1] + 0.3f * state->f[2] + ff * state->g[2];
+	state->g[3] = state->g[2] + 0.3f * state->f[3] + ff * state->g[3];
+
+	state->f[0] = input;
+	state->f[1] = state->g[0];
+	state->f[2] = state->g[1];
+	state->f[3] = state->g[2];
+	return state->g[3];
+}
+
+void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
+int32_t sumL, sumR;
+SynthOsc *lfoEnvMod = &(synth->lfoEnvMod);
+SynthFXBus *fx = &(synth->bus[0]);
+while (len--) {
+	sumL = sumR = 0;
+	float envMod = lfoEnvMod->fn(lfoEnvMod, 0.0f, 0.0f);
+	SynthVoice *voice = &(synth->voices[SYNTH_POLYPHONY - 1]);
+	while (voice >= synth->voices) {
+		voice->age++;
+		ADSR *env = &(voice->env);
+		if (env->phase) {
+			float gain = synth_adsr_update(env, envMod);
+			SynthOsc *osc = &(voice->lfoPitch);
+			float lfoVPitchVal = osc->fn(osc, 0.0f, 0.0f);
+			osc = &(voice->lfoMorph);
+			float lfoVMorphVal = osc->fn(osc, 0.0f, 0.0f);
+			osc = &(voice->osc[0]);
+			float val = osc->fn(osc, lfoVPitchVal, lfoVMorphVal);
+			//val = synth_process_iir(&(voice->filter[0]), val, 1.0f);
+			val = synth_process_4pole(&(voice->filter[0]), val);
+			sumL += (int32_t) (gain * val);
+			osc++;
+			val = osc->fn(osc, lfoVPitchVal, lfoVMorphVal);
+			//val = synth_process_iir(&(voice->filter[1]), val, 1.0f);
+			val = synth_process_4pole(&(voice->filter[1]), val);
+			sumR += (int32_t) (gain * val);
+		}
+		voice--;
+	}
+	sumL += *(fx->readPtr);
+	clamp16(sumL);
+	sumR += *(fx->readPtr);
+	clamp16(sumR);
+#ifdef SYNTH_USE_DELAY
+	fx->readPtr++;
+	fx->readPos++;
+	if (fx->readPos >= fx->len) {
+		fx->readPos = 0;
+		fx->readPtr = &(fx->buf[0]);
+	}
+#endif
+	//sumL = (sumL + sumR) >> 1;
+	*ptr = sumL;
+	ptr++;
+	*ptr = sumR;
+	ptr++;
+#ifdef SYNTH_USE_DELAY
+	*(fx->writePtr) = clamp16((sumL + sumR) >> fx->decay);
+	fx->writePtr++;
+	fx->writePos++;
+	if (fx->writePos >= fx->len) {
+		fx->writePos = 0;
+		fx->writePtr = &(fx->buf[0]);
+	}
+#endif
+}
 }
