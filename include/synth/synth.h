@@ -163,8 +163,8 @@ void		synth_init(Synth *synth);
 SynthVoice*	synth_new_voice(Synth *synth);
 void		synth_render_slice(Synth *synth, int16_t *ptr, size_t len);
 
-void synth_init_iir(IIRState *state, IIRType type, float cutoff, float reso);
-void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso);
+void synth_init_iir(IIRState *state, IIRType type, float cutoff, float reso, float damping);
+void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso, float damping);
 float synth_process_iir(IIRState *state, float input, float env);
 
 #endif

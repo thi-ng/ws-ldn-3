@@ -22,7 +22,7 @@ struct SeqTrack {
 	float tempoScale;
 	float cutoff;
 	float resonance;
-
+	float damping;
 };
 
 SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes, uint16_t length, uint32_t ticks, float tempoScale);

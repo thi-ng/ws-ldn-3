@@ -15,6 +15,7 @@ SeqTrack* initTrack(SeqTrack *track, SeqTrackFn fn, int8_t *notes,
 	track->direction = 1;
 	track->cutoff = 1000;
 	track->resonance = 0.5;
+	track->damping = 0.5;
 	return track;
 }
 

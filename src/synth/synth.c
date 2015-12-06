@@ -175,8 +175,8 @@ float synth_adsr_update(ADSR *env, float envMod) {
 void synth_voice_init(SynthVoice *voice, uint32_t flags) {
 	synth_osc_init(&(voice->lfoPitch), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
 	synth_osc_init(&(voice->lfoMorph), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
-	synth_init_iir(&(voice->filter[0]), IIR_HP, 0.0f, 0.85f);
-	synth_init_iir(&(voice->filter[1]), IIR_HP, 0.0f, 0.85f);
+	synth_init_iir(&(voice->filter[0]), IIR_HP, 0.0f, 0.85f, 0.5f);
+	synth_init_iir(&(voice->filter[1]), IIR_HP, 0.0f, 0.85f, 0.5f);
 	voice->age = 0;
 	voice->flags = flags;
 }
@@ -226,20 +226,20 @@ void synth_bus_init(SynthFXBus *bus, int16_t *buf, size_t len, uint8_t decay) {
 	memset(buf, 0, len << 1);
 }
 
-void synth_init_iir(IIRState *state, IIRType type, float cutoff, float reso) {
+void synth_init_iir(IIRState *state, IIRType type, float cutoff, float reso, float damping) {
 	state->f[0] = 0.0f; // lp
 	state->f[1] = 0.0f; // hp
 	state->f[2] = 0.0f; // bp
 	state->f[3] = 0.0f; // br
 	state->type = type;
-	synth_set_iir_coeff(state, cutoff, reso);
+	synth_set_iir_coeff(state, cutoff, reso, damping);
 }
 
-void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso) {
+void synth_set_iir_coeff(IIRState *iir, float cutoff, float reso, float damping) {
 	iir->cutoff = cutoff;
 	iir->resonance = reso;
 	iir->freq = 2.0f * sinf(PI * fminf(0.5f, cutoff * INV_NYQUIST_FREQ));
-	iir->damp = fminf(2.0f * (1.0f - powf(reso, 0.05f)),
+	iir->damp = fminf(2.0f * (1.0f - powf(reso, damping)),
 			fminf(2.0f, 2.0f / iir->freq - iir->freq * 0.5f));
 }
 

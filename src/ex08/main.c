@@ -153,18 +153,14 @@ void processMidiPackets() {
 					tracks[1]->cutoff = 240.0f + ((float)val)/127.0f*4890.0f;
 					break;
 				case MIDI_CC_KNOB1:
-//					r = (float) val / 127.0f;
-//					tracks[0]->ticks = 150 + (uint32_t) (r * 850.0f);
-//					updateTempo(tracks[0]->ticks);
-//					break;
 					tracks[0]->resonance = 0.95f * (float)(val/127.0f);
 
 				case MIDI_CC_KNOB2:
-//					tracks[1]->tempoScale =
-//							tempoScale[((uint32_t) val * 7) >> 7];
-//					updateTempo(tracks[0]->ticks);
-//					break;
 					tracks[1]->resonance = 0.95f * (float)val/127.0f;
+
+				case MIDI_CC_KNOB3:
+					tracks[0]->damping = 0.05+0.9 * (float)val/127.0f;
+					tracks[1]->damping = 0.05+0.9 * (float)val/127.0f;
 
 				default:
 					if (subtype >= MIDI_CC_BT_S1 && subtype <= MIDI_CC_BT_S8) {
@@ -264,8 +260,8 @@ void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	SynthVoice *voice = synth_new_voice(synth);
 	(&voice->filter[0])->type=IIR_LP;
 	(&voice->filter[1])->type=IIR_LP;
-	synth_set_iir_coeff(&voice->filter[0], track->cutoff, track->resonance);
-	synth_set_iir_coeff(&voice->filter[1], track->cutoff, track->resonance);
+	synth_set_iir_coeff(&voice->filter[0], track->cutoff, track->resonance, track->damping);
+	synth_set_iir_coeff(&voice->filter[1], track->cutoff, track->resonance, track->damping);
 	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
 			10.0f, 0.0f);
