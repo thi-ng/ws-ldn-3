@@ -117,7 +117,7 @@ void recordWaveFile(void) {
 
 	f_lseek(&wavFile, 0);
 	updateWavHeader(&wav, bufferState.ptr);
-	f_write(&wavFile, &wav, 44, (void*) &byteswritten);
+	f_write(&wavFile, &wav, sizeof(WavHeader), (void*) &byteswritten);
 	f_close(&wavFile);
 	f_mount(NULL, 0, 1);
 
