@@ -159,16 +159,16 @@ void processMidiPackets() {
 					tracks[1]->cutoff = 80.0f + (float) val / 127.0f * 12000.0f;
 					break;
 				case MIDI_CC_KNOB1:
-					tracks[0]->resonance = 0.95f * (float) val / 127.0f;
+					tracks[0]->resonance = 0.85f * (float) val / 127.0f;
 					break;
 
 				case MIDI_CC_KNOB2:
-					tracks[1]->resonance = 0.95f * (float) val / 127.0f;
+					tracks[1]->resonance = 0.85f * (float) val / 127.0f;
 					break;
 
 				case MIDI_CC_KNOB3:
-					tracks[0]->damping = 0.05 + 0.9 * (float) val / 127.0f;
-					tracks[1]->damping = 0.05 + 0.9 * (float) val / 127.0f;
+					tracks[0]->damping = 0.15 + 0.9 * (float) val / 127.0f;
+					tracks[1]->damping = 0.15 + 0.9 * (float) val / 127.0f;
 					break;
 
 				default:
@@ -271,9 +271,11 @@ void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 			track->damping);
 	synth_init_iir(&voice->filter[1], IIR_HP, track->cutoff, track->resonance,
 			track->damping);
+//	synth_init_4pole(&voice->filter[0], track->cutoff, track->resonance);
+//	synth_init_4pole(&voice->filter[1], track->cutoff, track->resonance);
 	synth_adsr_init(&voice->env, 0.00025f, 0.000025f, 0.005f, 1.0f, 0.95f);
-	synth_osc_init(&voice->lfoPitch, synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
-			2.0f, 0.0f);
+	synth_osc_init(&voice->lfoPitch, synth_osc_sin, FREQ_TO_RAD(2.0f), 0.0f,
+			10.0f, 0.0f);
 	track->userFn(track, voice, freq, tick);
 }
 
