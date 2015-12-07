@@ -5,25 +5,30 @@
 #include "synth/wavetable.h"
 #include "tinymt32.h"
 
-#define TAU                     6.283185307f
-#define PI                    	3.14159265f
-#define HALF_PI                 1.570796326794897f
+#define TAU						(6.283185307f)
+#define PI						(3.14159265f)
+#define HALF_PI					(1.570796326794897f)
 #define INV_TAU					(1.0f / TAU)
 #define INV_PI					(1.0f / PI)
 #define INV_HALF_PI				(1.0f / HALF_PI)
 
-#define SAMPLERATE				44100
+#define SAMPLERATE				(44100)
 #define INV_NYQUIST_FREQ		(2.0f / (float)SAMPLERATE)
 
 #ifndef SYNTH_POLYPHONY
-#define SYNTH_POLYPHONY			6
+#define SYNTH_POLYPHONY			(6)
 #endif
 
 #ifndef AUDIO_BUFFER_SIZE
-#define AUDIO_BUFFER_SIZE		256
+#define AUDIO_BUFFER_SIZE		(256)
 #endif
 
-#define ADSR_SCALE				32767.0f
+#ifndef SYNTH_RNG_SEED
+#define SYNTH_RNG_SEED			(0xcafebad)
+#endif
+
+#define ADSR_SCALE				(32767.0f)
+#define INV_ADSR_SCALE			(1.0f / ADSR_SCALE)
 
 //#define SYNTH_USE_DELAY
 #define DELAY_LENGTH			(uint32_t)(SAMPLERATE * 0.375f)
@@ -45,7 +50,7 @@ inline float clampf(float x, float min, float max) {
 }
 
 inline int16_t clamp16(int32_t x) {
-	return (int16_t)((x < -0x7fff) ? -0x8000 : (x > 0x7fff ? 0x7fff : x));
+	return (int16_t) ((x < -0x7fff) ? -0x8000 : (x > 0x7fff ? 0x7fff : x));
 }
 
 inline float stepf(float x, float edge, float y1, float y2) {
@@ -89,27 +94,32 @@ typedef struct {
 } ADSR;
 
 typedef enum {
-  IIR_LP = 0, IIR_HP, IIR_BP, IIR_BR
+	IIR_LP = 0, IIR_HP, IIR_BP, IIR_BR
 } FilterType;
 
-typedef struct {
-  float* src;
-  float* lfo;
-  float f[4];
-  float g[4];
-  float cutoff;
-  float resonance;
-  float freq;
-  float damp;
-  FilterType type;
-} FilterState;
+typedef struct SynthFilter SynthFilter;
+
+typedef float (*FilterFn)(SynthFilter*, float input);
+
+struct SynthFilter {
+	float* src;
+	float* lfo;
+	float f[4];
+	float g[4];
+	float cutoff;
+	float resonance;
+	float freq;
+	float damp;
+	FilterType type;
+	FilterFn fn;
+};
 
 typedef struct {
 	SynthOsc osc[2];
 	SynthOsc lfoPitch;
 	SynthOsc lfoMorph;
 	ADSR env;
-	FilterState filter[2];
+	SynthFilter filter[2];
 	uint32_t flags;
 	uint32_t age;
 } SynthVoice;
@@ -134,38 +144,47 @@ typedef struct {
 	uint8_t nextVoice;
 } Synth;
 
-void	synth_osc_init(SynthOsc *osc, OscFn fn, float gain, float phase, float freq, float dc);
-void	synth_osc_set_wavetables(SynthOsc *osc, const float *tbl1, const float *tbl2);
-float	synth_osc_sin(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_sin_math(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_sin_dc(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_sin2(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_rect(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_rect_phase(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_rect_dc(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_saw(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_saw_dc(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_tri(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_noise(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_nop(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_wtable_simple(SynthOsc *osc, float lfo, float lfo2);
-float	synth_osc_wtable_morph(SynthOsc *osc, float lfo, float lfo2);
+void synth_osc_init(SynthOsc *osc, OscFn fn, float gain, float phase,
+		float freq, float dc);
+void synth_osc_set_wavetables(SynthOsc *osc, const float *tbl1,
+		const float *tbl2);
+float synth_osc_sin(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_sin_math(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_sin_dc(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_sin2(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_rect(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_rect_phase(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_rect_dc(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_saw(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_saw_dc(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_tri(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_noise(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_nop(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_wtable_simple(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_wtable_morph(SynthOsc *osc, float lfo, float lfo2);
 
-void		synth_adsr_init(ADSR *env, float attRate, float decayRate, float releaseRate, float attGain, float sustainGain);
-float		synth_adsr_update(ADSR *env, float envMod);
+void synth_adsr_init(ADSR *env, float attRate, float decayRate,
+		float releaseRate, float attGain, float sustainGain);
+float synth_adsr_update(ADSR *env, float envMod);
 
-void		synth_bus_init(SynthFXBus *bus, int16_t *buf, size_t len, uint8_t decay);
+void synth_bus_init(SynthFXBus *bus, int16_t *buf, size_t len, uint8_t decay);
 
-void		synth_voice_init(SynthVoice *voice, uint32_t flags);
-void		synth_init(Synth *synth);
+void synth_voice_init(SynthVoice *voice, uint32_t flags);
+void synth_init(Synth *synth);
 
-SynthVoice*	synth_new_voice(Synth *synth);
-void		synth_render_slice(Synth *synth, int16_t *ptr, size_t len);
+SynthVoice* synth_new_voice(Synth *synth);
+void synth_render_slice(Synth *synth, int16_t *ptr, size_t len);
 
-void synth_init_iir(FilterState *state, FilterType type, float cutoff, float reso, float damping);
-void synth_set_iir_coeff(FilterState *iir, float cutoff, float reso, float damping);
-float synth_process_iir(FilterState *state, float input, float env);
+void synth_init_iir(SynthFilter *state, FilterType type, float cutoff,
+		float reso, float damping);
+void synth_set_iir_coeff(SynthFilter *iir, float cutoff, float reso,
+		float damping);
+float synth_process_iir(SynthFilter *state, float input);
+
+void synth_init_4pole(SynthFilter *state, float cutoff, float reso);
+void synth_set_4pole_coeff(SynthFilter *state, float cutoff, float reso);
+float synth_process_4pole(SynthFilter *state, float input);
 
 #endif

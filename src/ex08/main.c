@@ -1,6 +1,6 @@
 #include "ex08/main.h"
 
-#define NUM_USER_FNS 2
+#define NUM_USER_FNS 4
 
 AppState appState = APP_IDLE;
 __IO PlaybackState playbackState = PLAYBACK_IDLE;
@@ -22,10 +22,15 @@ static void resumePlayback(void);
 static void rewindPlayback(void);
 static void pausePlayback(void);
 static void stopPlayback(void);
-static void playNote(Synth* synth, SeqTrack *track, int8_t note,
+static void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick);
+static void trackOscRect(SeqTrack *track, SynthVoice *voice, float freq,
 		uint32_t tick);
-static void trackOscRect(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick);
-static void trackOscWavetable1(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick);
+static void trackOscSaw(SeqTrack *track, SynthVoice *voice, float freq,
+		uint32_t tick);
+static void trackOscWavetable1(SeqTrack *track, SynthVoice *voice, float freq,
+		uint32_t tick);
+static void trackOscWavetable2(SeqTrack *track, SynthVoice *voice, float freq,
+		uint32_t tick);
 
 static void updateAudioBuffer(Synth *synth);
 static void updateTempo(uint32_t ticks);
@@ -38,7 +43,8 @@ static tinymt32_t rng;
 static int8_t notes1[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 static int8_t notes2[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
-static SeqTrackUserFn userFns[] = { trackOscRect, trackOscWavetable1 };
+static SeqTrackUserFn userFns[] = { trackOscRect, trackOscSaw,
+		trackOscWavetable1, trackOscWavetable2 };
 __IO static int32_t userFnID = 0;
 
 int main(void) {
@@ -147,22 +153,22 @@ void processMidiPackets() {
 					changeTrackUserFn(1);
 					break;
 				case MIDI_CC_SLIDER1:
-					tracks[0]->cutoff = 240.f + ((float)val)/127.0f*4890.0f;
+					tracks[0]->cutoff = 80.0f + (float) val / 127.0f * 12000.0f;
 					break;
 				case MIDI_CC_SLIDER2:
-					tracks[1]->cutoff = 240.0f + ((float)val)/127.0f*4890.0f;
+					tracks[1]->cutoff = 80.0f + (float) val / 127.0f * 12000.0f;
 					break;
 				case MIDI_CC_KNOB1:
-					tracks[0]->resonance = 0.95f * (float)(val/127.0f);
+					tracks[0]->resonance = 0.95f * (float) val / 127.0f;
 					break;
 
 				case MIDI_CC_KNOB2:
-					tracks[1]->resonance = 0.95f * (float)val/127.0f;
+					tracks[1]->resonance = 0.95f * (float) val / 127.0f;
 					break;
 
 				case MIDI_CC_KNOB3:
-					tracks[0]->damping = 0.05+0.9 * (float)val/127.0f;
-					tracks[1]->damping = 0.05+0.9 * (float)val/127.0f;
+					tracks[0]->damping = 0.05 + 0.9 * (float) val / 127.0f;
+					tracks[1]->damping = 0.05 + 0.9 * (float) val / 127.0f;
 					break;
 
 				default:
@@ -219,7 +225,7 @@ void initSequencer(void) {
 	tracks[0] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNote,
 			notes1, 8, 250, 1.0f);
 	tracks[1] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNote,
-			notes2, 8, 250, 2.0f);
+			notes2, 8, 250, 1.0f);
 	changeTrackUserFn(0);
 }
 
@@ -261,26 +267,48 @@ void updateAudioBuffer(Synth *synth) {
 void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	float freq = notes[note] * powf(1.02, (float) track->pitchBend);
 	SynthVoice *voice = synth_new_voice(synth);
-	(&voice->filter[0])->type=IIR_LP;
-	(&voice->filter[1])->type=IIR_LP;
-	synth_set_iir_coeff(&voice->filter[0], track->cutoff, track->resonance, track->damping);
-	synth_set_iir_coeff(&voice->filter[1], track->cutoff, track->resonance, track->damping);
-	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
-	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
-			10.0f, 0.0f);
+	synth_init_iir(&voice->filter[0], IIR_HP, track->cutoff, track->resonance,
+			track->damping);
+	synth_init_iir(&voice->filter[1], IIR_HP, track->cutoff, track->resonance,
+			track->damping);
+	synth_adsr_init(&voice->env, 0.00025f, 0.000025f, 0.005f, 1.0f, 0.95f);
+	synth_osc_init(&voice->lfoPitch, synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
+			2.0f, 0.0f);
 	track->userFn(track, voice, freq, tick);
 }
 
 void trackOscRect(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick) {
-	synth_osc_init(&(voice->osc[0]), synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(&voice->osc[0], synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(&voice->osc[1], synth_osc_rect, 0.10f, 0.0f, freq * 1.01f,
+			0.0f);
 }
 
-void trackOscWavetable1(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick) {
-	synth_osc_init(&(voice->osc[0]), synth_osc_wtable_morph, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_set_wavetables(&(voice->osc[0]), wtable_sin_exp2, wtable_sin_pow2);
-	synth_osc_init(&(voice->osc[1]), synth_osc_wtable_morph, 0.10f, 0.0f, freq * 0.5f, 0.0f);
-	synth_osc_set_wavetables(&(voice->osc[1]), wtable_sin_exp2, wtable_super_saw);
+void trackOscSaw(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick) {
+	synth_osc_init(&voice->osc[0], synth_osc_saw, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(&voice->osc[1], synth_osc_saw, 0.10f, 0.0f, freq * 0.501f,
+			0.0f);
+}
+
+void trackOscWavetable1(SeqTrack *track, SynthVoice *voice, float freq,
+		uint32_t tick) {
+	SynthOsc *osc = &voice->osc[0];
+	synth_osc_init(osc, synth_osc_wtable_simple, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_set_wavetables(osc, wtable_sin_exp2, NULL);
+	osc++;
+	synth_osc_init(osc, synth_osc_wtable_simple, 0.10f, 0.0f, freq * 0.5f,
+			0.0f);
+	synth_osc_set_wavetables(osc, wtable_sin_exp2, NULL);
+}
+
+void trackOscWavetable2(SeqTrack *track, SynthVoice *voice, float freq,
+		uint32_t tick) {
+	SynthOsc *osc = &voice->osc[0];
+	synth_osc_init(osc, synth_osc_wtable_simple, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_set_wavetables(osc, wtable_sin_pow, NULL);
+	osc++;
+	synth_osc_init(osc, synth_osc_wtable_simple, 0.10f, 0.0f, freq * 0.5f,
+			0.0f);
+	synth_osc_set_wavetables(osc, wtable_sin_pow, NULL);
 }
 
 void USBH_MIDI_ReceiveCallback(USBH_HandleTypeDef *phost) {

@@ -191,8 +191,7 @@ void synth_init(Synth *synth) {
 	}
 	synth_osc_init(&(synth->lfoFilter), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
 	synth_osc_init(&(synth->lfoEnvMod), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
-	synth_bus_init(&(synth->bus[0]), malloc(sizeof(int16_t)), 1, 2);
-	tinymt32_init(&synthRNG, 0xcafebad);
+	tinymt32_init(&synthRNG, SYNTH_RNG_SEED);
 }
 
 SynthVoice* synth_new_voice(Synth *synth) {
@@ -226,121 +225,145 @@ void synth_bus_init(SynthFXBus *bus, int16_t *buf, size_t len, uint8_t decay) {
 	memset(buf, 0, len << 1);
 }
 
-void synth_init_iir(FilterState *state, FilterType type, float cutoff,
+void synth_init_iir(SynthFilter *state, FilterType type, float cutoff,
 		float reso, float damping) {
-	state->f[0] = state->g[0] = 0.0f; // lp
-	state->f[1] = state->g[1] = 0.0f; // hp
-	state->f[2] = state->g[2] = 0.0f; // bp
-	state->f[3] = state->g[3] = 0.0f; // br
+	state->f[0] = 0.0f; // lp
+	state->f[1] = 0.0f; // hp
+	state->f[2] = 0.0f; // bp
+	state->f[3] = 0.0f; // br
 	state->type = type;
+	state->fn = synth_process_iir;
 	synth_set_iir_coeff(state, cutoff, reso, damping);
 }
 
-void synth_set_iir_coeff(FilterState *iir, float cutoff, float reso,
+void synth_set_iir_coeff(SynthFilter *iir, float cutoff, float reso,
 		float damping) {
 	iir->cutoff = cutoff;
 	iir->resonance = reso;
-	iir->freq = 2.0f * sinf(PI * fminf(0.5f, cutoff * INV_NYQUIST_FREQ));
+	iir->freq = 2.0f * sinf(PI * fminf(0.25f, cutoff / (SAMPLERATE * 2.0f)));
 	iir->damp = fminf(2.0f * (1.0f - powf(reso, damping)),
 			fminf(2.0f, 2.0f / iir->freq - iir->freq * 0.5f));
 }
 
-float synth_process_iir(FilterState *state, float input, float env) {
+float synth_process_iir(SynthFilter *state, float input) {
 	float *f = state->f;
+	float damp = state->damp;
+	float freq = state->freq;
 	// 1st pass
-	f[3] = input - state->damp * f[2];
-	f[0] = f[0] + state->freq * f[2];
+	f[3] = input - damp * f[2];
+	f[0] += freq * f[2];
 	f[1] = f[3] - f[0];
-	f[2] = state->freq * f[1] + f[2];
+	f[2] += freq * f[1];
 	float output = f[state->type];
 
 	// 2nd pass
-	f[3] = input - state->damp * f[2];
-	f[0] = f[0] + state->freq * f[2];
+	f[3] = input - damp * f[2];
+	f[0] += freq * f[2];
 	f[1] = f[3] - f[0];
-	f[2] = state->freq * f[1] + f[2];
-	output = 0.5f * (output + f[state->type]);
-	return (input + (output - input) * env);
+	f[2] += freq * f[1];
+	return 0.5f * (output + f[state->type]);
 }
 
-float synth_process_4pole(FilterState *state, float input) {
-	float f = 10.0f * state->cutoff * INV_NYQUIST_FREQ;
-	if (f > 1.0f) {
-		f = 1.0f;
+void synth_init_4pole(SynthFilter *state, float cutoff, float reso) {
+	float *f = state->f;
+	float *g = state->g;
+	f[0] = g[0] = 0.0f;
+	f[1] = g[1] = 0.0f;
+	f[2] = g[2] = 0.0f;
+	f[3] = g[3] = 0.0f;
+	state->fn = synth_process_4pole;
+	synth_set_4pole_coeff(state, cutoff, reso);
+}
+
+void synth_set_4pole_coeff(SynthFilter *state, float cutoff, float reso) {
+	float fc = 10.0f * cutoff * INV_NYQUIST_FREQ;
+	float ff;
+	if (fc <= 1.0f) {
+		ff = fc * fc;
+	} else {
+		ff = fc = 1.0f;
 	}
-	float ff = f * f;
-	input -= state->g[3] * state->resonance * (1.0f - 0.15f * ff);
+	state->cutoff = cutoff;
+	state->resonance = reso;
+	state->freq = ff;
+	state->damp = 1.0f - fc;
+}
+
+float synth_process_4pole(SynthFilter *state, float input) {
+	float *f = state->f;
+	float *g = state->g;
+	float ff = state->freq;
+
+	input -= g[3] * state->resonance * (1.0f - 0.15f * ff);
 	input *= 0.35013f * ff * ff;
 
-	ff = 1.0f - f;
+	ff = state->damp;
 
-	state->g[0] = input + 0.3f * state->f[0] + ff * state->g[0];
-	state->g[1] = state->g[0] + 0.3f * state->f[1] + ff * state->g[1];
-	state->g[2] = state->g[1] + 0.3f * state->f[2] + ff * state->g[2];
-	state->g[3] = state->g[2] + 0.3f * state->f[3] + ff * state->g[3];
+	g[0] = input + 0.3f * f[0] + ff * g[0];
+	g[1] = g[0] + 0.3f * f[1] + ff * g[1];
+	g[2] = g[1] + 0.3f * f[2] + ff * g[2];
+	g[3] = g[2] + 0.3f * f[3] + ff * g[3];
 
-	state->f[0] = input;
-	state->f[1] = state->g[0];
-	state->f[2] = state->g[1];
-	state->f[3] = state->g[2];
-	return state->g[3];
+	f[0] = input;
+	f[1] = g[0];
+	f[2] = g[1];
+	f[3] = g[2];
+	return g[3];
 }
 
 void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
-int32_t sumL, sumR;
-SynthOsc *lfoEnvMod = &(synth->lfoEnvMod);
-SynthFXBus *fx = &(synth->bus[0]);
-while (len--) {
-	sumL = sumR = 0;
-	float envMod = lfoEnvMod->fn(lfoEnvMod, 0.0f, 0.0f);
-	SynthVoice *voice = &(synth->voices[SYNTH_POLYPHONY - 1]);
-	while (voice >= synth->voices) {
-		voice->age++;
-		ADSR *env = &(voice->env);
-		if (env->phase) {
-			float gain = synth_adsr_update(env, envMod);
-			SynthOsc *osc = &(voice->lfoPitch);
-			float lfoVPitchVal = osc->fn(osc, 0.0f, 0.0f);
-			osc = &(voice->lfoMorph);
-			float lfoVMorphVal = osc->fn(osc, 0.0f, 0.0f);
-			osc = &(voice->osc[0]);
-			float val = osc->fn(osc, lfoVPitchVal, lfoVMorphVal);
-			//val = synth_process_iir(&(voice->filter[0]), val, 1.0f);
-			val = synth_process_4pole(&(voice->filter[0]), val);
-			sumL += (int32_t) (gain * val);
-			osc++;
-			val = osc->fn(osc, lfoVPitchVal, lfoVMorphVal);
-			//val = synth_process_iir(&(voice->filter[1]), val, 1.0f);
-			val = synth_process_4pole(&(voice->filter[1]), val);
-			sumR += (int32_t) (gain * val);
+	int32_t sumL, sumR;
+	SynthOsc *lfoEnvMod = &(synth->lfoEnvMod);
+	SynthFXBus *fx = &synth->bus[0];
+	while (len--) {
+		sumL = sumR = 0;
+		float envMod = lfoEnvMod->fn(lfoEnvMod, 0.0f, 0.0f);
+		SynthVoice *voice = &synth->voices[SYNTH_POLYPHONY - 1];
+		while (voice >= synth->voices) {
+			voice->age++;
+			ADSR *env = &voice->env;
+			if (env->phase) {
+				float gain = synth_adsr_update(env, envMod);
+				SynthOsc *osc = &voice->lfoPitch;
+				SynthFilter *flt = &voice->filter[0];
+				float lfoVPitchVal = osc->fn(osc, 0.0f, 0.0f);
+				osc = &voice->lfoMorph;
+				float lfoVMorphVal = osc->fn(osc, 0.0f, 0.0f);
+				osc = &voice->osc[0];
+				sumL += (int32_t) (gain * flt->fn(flt, osc->fn(osc, lfoVPitchVal, lfoVMorphVal)));
+				osc++;
+				flt++;
+				sumR += (int32_t) (gain * flt->fn(flt, osc->fn(osc, lfoVPitchVal, lfoVMorphVal)));
+			}
+			voice--;
 		}
-		voice--;
-	}
-	sumL += *(fx->readPtr);
-	clamp16(sumL);
-	sumR += *(fx->readPtr);
-	clamp16(sumR);
 #ifdef SYNTH_USE_DELAY
-	fx->readPtr++;
-	fx->readPos++;
-	if (fx->readPos >= fx->len) {
-		fx->readPos = 0;
-		fx->readPtr = &(fx->buf[0]);
-	}
+		sumL += *(fx->readPtr);
+		sumR += *(fx->readPtr);
 #endif
-	//sumL = (sumL + sumR) >> 1;
-	*ptr = sumL;
-	ptr++;
-	*ptr = sumR;
-	ptr++;
+		clamp16(sumL);
+		clamp16(sumR);
 #ifdef SYNTH_USE_DELAY
-	*(fx->writePtr) = clamp16((sumL + sumR) >> fx->decay);
-	fx->writePtr++;
-	fx->writePos++;
-	if (fx->writePos >= fx->len) {
-		fx->writePos = 0;
-		fx->writePtr = &(fx->buf[0]);
-	}
+		fx->readPtr++;
+		fx->readPos++;
+		if (fx->readPos >= fx->len) {
+			fx->readPos = 0;
+			fx->readPtr = &(fx->buf[0]);
+		}
 #endif
-}
+		//sumL = (sumL + sumR) >> 1;
+		*ptr = sumL;
+		ptr++;
+		*ptr = sumR;
+		ptr++;
+#ifdef SYNTH_USE_DELAY
+		*(fx->writePtr) = clamp16((sumL + sumR) >> fx->decay);
+		fx->writePtr++;
+		fx->writePos++;
+		if (fx->writePos >= fx->len) {
+			fx->writePos = 0;
+			fx->writePtr = &(fx->buf[0]);
+		}
+#endif
+	}
 }
