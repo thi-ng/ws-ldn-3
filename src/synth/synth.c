@@ -64,7 +64,7 @@ float synth_osc_saw(SynthOsc *osc, float lfo, float lfo2) {
 float synth_osc_saw_dc(SynthOsc *osc, float lfo, float lfo2) {
 	float phase = truncPhase(osc->phase + osc->freq + lfo);
 	osc->phase = phase;
-	return maddf(phase * INV_PI - 1.0f, osc->amp, osc->dcOffset);
+	return osc->dcOffset + (phase * INV_PI - 1.0f) * osc->amp;
 }
 
 float synth_osc_tri(SynthOsc *osc, float lfo, float lfo2) {
@@ -93,14 +93,12 @@ float synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2) {
 
 float synth_osc_wtable_simple(SynthOsc *osc, float lfo, float lfo2) {
 	float phase = truncPhase(osc->phase + osc->freq + lfo);
-	truncPhase(phase);
 	osc->phase = phase;
 	return WTABLE_LOOKUP(osc->wtable1, phase) * osc->amp;
 }
 
 float synth_osc_wtable_morph(SynthOsc *osc, float lfo, float morph) {
 	float phase = truncPhase(osc->phase + osc->freq + lfo);
-	truncPhase(phase);
 	osc->phase = phase;
 	uint32_t idx = WTABLE_INDEX(phase);
 	return mixf(WTABLE_LOOKUP_RAW(osc->wtable1, idx),
@@ -132,43 +130,41 @@ void synth_adsr_init(ADSR *env, float attRate, float decayRate,
 	env->sustainGain = sustainGain * ADSR_SCALE
 	;
 	env->phase = ATTACK;
+	env->fn = synth_adsr_update_attack;
 	env->currGain = 0.0f;
 }
 
-float synth_adsr_update(ADSR *env, float envMod) {
-	switch (env->phase) {
-	case ATTACK:
-		if (env->currGain >= env->attackGain) {
-			env->phase = DECAY;
-		} else {
-			env->currGain += env->attackRate * envMod;
-			if (env->currGain > ADSR_SCALE) {
-				env->currGain = ADSR_SCALE;
-			}
-		}
-		break;
-	case DECAY:
-		if (env->currGain > env->sustainGain) {
-			env->currGain -= env->decayRate * envMod;
-		} else {
-			env->phase = RELEASE; // skip SUSTAIN phase for now
-		}
-		break;
-	case SUSTAIN:
-		return env->sustainGain;
-	case RELEASE:
-		if (env->currGain > 3e-5f) { // ~0.98 in 16bit
-			env->currGain -= env->releaseRate;
-			if (env->currGain < 0.0f) {
-				env->currGain = 0.0f;
-			}
-		} else {
-			env->phase = IDLE;
-		}
-		break;
-	default:
-		break;
+float synth_adsr_update_attack(ADSR *env, float envMod) {
+	float gain = env->currGain + env->attackRate * envMod;
+	if (gain >= env->attackGain) {
+		gain = env->attackGain;
+		//env->phase = DECAY;
+		env->fn = synth_adsr_update_decay;
 	}
+	return env->currGain = gain;
+}
+
+float synth_adsr_update_decay(ADSR *env, float envMod) {
+	float gain = env->currGain - env->decayRate * envMod;
+	if (gain <= env->sustainGain) {
+		gain = env->sustainGain;
+		//env->phase = RELEASE; // skip SUSTAIN phase for now
+		env->fn = synth_adsr_update_release;
+	}
+	return env->currGain = gain;
+}
+
+float synth_adsr_update_release(ADSR *env, float envMod) {
+	float gain = env->currGain - env->releaseRate;
+	if (gain < 3e-5f) { // ~0.98 in 16bit
+		env->currGain = 0.0f;
+		env->phase = IDLE;
+		env->fn = synth_adsr_update_idle;
+	}
+	return env->currGain = gain;
+}
+
+float synth_adsr_update_idle(ADSR *env, float envMod) {
 	return env->currGain;
 }
 
@@ -313,7 +309,7 @@ float synth_process_4pole(SynthFilter *state, float input) {
 
 void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 	int32_t sumL, sumR;
-	SynthOsc *lfoEnvMod = &(synth->lfoEnvMod);
+	SynthOsc *lfoEnvMod = &synth->lfoEnvMod;
 	SynthFXBus *fx = &synth->bus[0];
 	while (len--) {
 		sumL = sumR = 0;
@@ -323,7 +319,7 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 			voice->age++;
 			ADSR *env = &voice->env;
 			if (env->phase) {
-				float gain = synth_adsr_update(env, envMod);
+				float gain = env->fn(env, envMod);
 				SynthOsc *osc = &voice->lfoPitch;
 				SynthFilter *flt = &voice->filter[0];
 				float lfoVPitchVal = osc->fn(osc, 0.0f, 0.0f);
@@ -338,31 +334,23 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 			voice--;
 		}
 #ifdef SYNTH_USE_DELAY
-		sumL += *(fx->readPtr);
-		sumR += *(fx->readPtr);
-#endif
-		clamp16(sumL);
-		clamp16(sumR);
-#ifdef SYNTH_USE_DELAY
-		fx->readPtr++;
+		int16_t d = *(fx->readPtr++);
+		sumL += d;
+		sumR += d;
 		fx->readPos++;
 		if (fx->readPos >= fx->len) {
 			fx->readPos = 0;
-			fx->readPtr = &(fx->buf[0]);
+			fx->readPtr = &fx->buf[0];
 		}
 #endif
-		//sumL = (sumL + sumR) >> 1;
-		*ptr = sumL;
-		ptr++;
-		*ptr = sumR;
-		ptr++;
+		*ptr++ = clamp16(sumL);
+		*ptr++ = clamp16(sumR);
 #ifdef SYNTH_USE_DELAY
-		*(fx->writePtr) = clamp16((sumL + sumR) >> fx->decay);
-		fx->writePtr++;
+		*(fx->writePtr++) = clamp16((sumL + sumR) >> fx->decay);
 		fx->writePos++;
 		if (fx->writePos >= fx->len) {
 			fx->writePos = 0;
-			fx->writePtr = &(fx->buf[0]);
+			fx->writePtr = &fx->buf[0];
 		}
 #endif
 	}

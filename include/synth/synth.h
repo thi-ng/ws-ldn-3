@@ -83,15 +83,20 @@ typedef enum {
 	IDLE = 0, ATTACK = 1, DECAY = 2, SUSTAIN = 3, RELEASE = 4
 } ADSRPhase;
 
-typedef struct {
+typedef struct ADSR ADSR;
+
+typedef float (*ADSRFn)(ADSR*, float envMod);
+
+struct ADSR {
 	float currGain;
 	float attackGain;
 	float sustainGain;
 	float attackRate;
 	float decayRate;
 	float releaseRate;
+	ADSRFn fn;
 	ADSRPhase phase;
-} ADSR;
+};
 
 typedef enum {
 	IIR_LP = 0, IIR_HP, IIR_BP, IIR_BR
@@ -167,7 +172,10 @@ float synth_osc_wtable_morph(SynthOsc *osc, float lfo, float lfo2);
 
 void synth_adsr_init(ADSR *env, float attRate, float decayRate,
 		float releaseRate, float attGain, float sustainGain);
-float synth_adsr_update(ADSR *env, float envMod);
+float synth_adsr_update_attack(ADSR *env, float envMod);
+float synth_adsr_update_decay(ADSR *env, float envMod);
+float synth_adsr_update_release(ADSR *env, float envMod);
+float synth_adsr_update_idle(ADSR *env, float envMod);
 
 void synth_bus_init(SynthFXBus *bus, int16_t *buf, size_t len, uint8_t decay);
 
