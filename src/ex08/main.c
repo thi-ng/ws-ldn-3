@@ -40,6 +40,12 @@ static Synth synth;
 static SeqTrack* tracks[2];
 static tinymt32_t rng;
 
+static uint8_t scale[] = {
+		0, 2, 4, 7, 9,
+		12, 14, 16, 19, 21,
+		24, 26, 28, 31, 33,
+		36, 38, 40, 43, 45,
+};
 static int8_t notes1[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 static int8_t notes2[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
@@ -176,14 +182,14 @@ void processMidiPackets() {
 						int8_t note = tracks[0]->notes[subtype - MIDI_CC_BT_S1];
 						tracks[0]->notes[subtype - MIDI_CC_BT_S1] = (
 								(note == -1) ?
-										(tinymt32_generate_uint32(&rng) % 48) :
+										scale[(tinymt32_generate_uint32(&rng) % 36)] :
 										-1);
 					}
 					if (subtype >= MIDI_CC_BT_M1 && subtype <= MIDI_CC_BT_M8) {
 						int8_t note = tracks[1]->notes[subtype - MIDI_CC_BT_M1];
 						tracks[1]->notes[subtype - MIDI_CC_BT_M1] = (
 								(note == -1) ?
-										(tinymt32_generate_uint32(&rng) % 24) :
+										scale[(tinymt32_generate_uint32(&rng) % 24)] :
 										-1);
 					}
 					break;
@@ -280,24 +286,24 @@ void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 }
 
 void trackOscRect(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick) {
-	synth_osc_init(&voice->osc[0], synth_osc_rect, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_init(&voice->osc[1], synth_osc_rect, 0.10f, 0.0f, freq * 1.01f,
+	synth_osc_init(&voice->osc[0], synth_osc_rect, 0.15f, 0.0f, freq, 0.0f);
+	synth_osc_init(&voice->osc[1], synth_osc_rect, 0.15f, 0.0f, freq * 1.01f,
 			0.0f);
 }
 
 void trackOscSaw(SeqTrack *track, SynthVoice *voice, float freq, uint32_t tick) {
-	synth_osc_init(&voice->osc[0], synth_osc_saw, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_init(&voice->osc[1], synth_osc_saw, 0.10f, 0.0f, freq * 0.501f,
+	synth_osc_init(&voice->osc[0], synth_osc_saw, 0.15f, 0.0f, freq, 0.0f);
+	synth_osc_init(&voice->osc[1], synth_osc_saw, 0.15f, 0.0f, freq * 0.501f,
 			0.0f);
 }
 
 void trackOscWavetable1(SeqTrack *track, SynthVoice *voice, float freq,
 		uint32_t tick) {
 	SynthOsc *osc = &voice->osc[0];
-	synth_osc_init(osc, synth_osc_wtable_simple, 0.10f, 0.0f, freq, 0.0f);
+	synth_osc_init(osc, synth_osc_wtable_simple, 0.15f, 0.0f, freq, 0.0f);
 	synth_osc_set_wavetables(osc, wtable_sin_exp2, NULL);
 	osc++;
-	synth_osc_init(osc, synth_osc_wtable_simple, 0.10f, 0.0f, freq * 0.5f,
+	synth_osc_init(osc, synth_osc_wtable_simple, 0.15f, 0.0f, freq * 0.5f,
 			0.0f);
 	synth_osc_set_wavetables(osc, wtable_sin_exp2, NULL);
 }
@@ -305,12 +311,12 @@ void trackOscWavetable1(SeqTrack *track, SynthVoice *voice, float freq,
 void trackOscWavetable2(SeqTrack *track, SynthVoice *voice, float freq,
 		uint32_t tick) {
 	SynthOsc *osc = &voice->osc[0];
-	synth_osc_init(osc, synth_osc_wtable_simple, 0.10f, 0.0f, freq, 0.0f);
-	synth_osc_set_wavetables(osc, wtable_sin_pow, NULL);
+	synth_osc_init(osc, synth_osc_wtable_simple, 0.15f, 0.0f, freq, 0.0f);
+	synth_osc_set_wavetables(osc, wtable_sin_pow2, NULL);
 	osc++;
-	synth_osc_init(osc, synth_osc_wtable_simple, 0.10f, 0.0f, freq * 0.5f,
+	synth_osc_init(osc, synth_osc_wtable_simple, 0.15f, 0.0f, freq * 0.5f,
 			0.0f);
-	synth_osc_set_wavetables(osc, wtable_sin_pow, NULL);
+	synth_osc_set_wavetables(osc, wtable_sin_pow2, NULL);
 }
 
 void USBH_MIDI_ReceiveCallback(USBH_HandleTypeDef *phost) {
