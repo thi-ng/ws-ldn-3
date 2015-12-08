@@ -49,7 +49,7 @@ static uint8_t scale[] = {
 static int8_t notes1[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 static int8_t notes2[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
-static SeqTrackUserFn userFns[] = { trackOscRect, trackOscSaw,
+static SeqTrackUserFn userFns[] = { trackOscSaw, trackOscRect,
 		trackOscWavetable1, trackOscWavetable2 };
 __IO static int32_t userFnID = 0;
 
