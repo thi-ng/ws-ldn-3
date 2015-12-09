@@ -40,18 +40,16 @@ static Synth synth;
 static SeqTrack* tracks[2];
 static tinymt32_t rng;
 
-static uint8_t scale[] = {
-		0, 2, 4, 7, 9,
-		12, 14, 16, 19, 21,
-		24, 26, 28, 31, 33,
-		36, 38, 40, 43, 45,
-};
+static uint8_t scale[] = { 0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28, 31,
+		33, 36, 38, 40, 43, 45 };
+static int8_t transpose[] = { -12, -5, 0, 7, 12 };
 static int8_t notes1[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 static int8_t notes2[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
 static SeqTrackUserFn userFns[] = { trackOscSaw, trackOscRect,
 		trackOscWavetable1, trackOscWavetable2 };
 __IO static int32_t userFnID = 0;
+__IO static uint32_t transposeID = 2;
 
 int main(void) {
 	HAL_Init();
@@ -158,6 +156,16 @@ void processMidiPackets() {
 				case MIDI_CC_BT_RIGHT:
 					changeTrackUserFn(1);
 					break;
+				case MIDI_CC_BT_TRACK_LEFT:
+					if (transposeID == 0) {
+						transposeID = 4;
+					} else {
+						transposeID--;
+					}
+					break;
+				case MIDI_CC_BT_TRACK_RIGHT:
+					transposeID = (transposeID + 1) % 5;
+					break;
 				case MIDI_CC_SLIDER1:
 					tracks[0]->cutoff = 80.0f + (float) val / 127.0f * 12000.0f;
 					break;
@@ -175,25 +183,31 @@ void processMidiPackets() {
 					tracks[1]->damping = 0.15 + 0.9f * (float) val / 127.0f;
 					break;
 				case MIDI_CC_KNOB4:
-					tracks[0]->attack = 0.00005f + 0.0012f * (float) val / 127.0f;
+					tracks[0]->attack = 0.00005f
+							+ 0.0012f * (float) val / 127.0f;
 					break;
 				case MIDI_CC_KNOB5:
-					tracks[1]->attack = 0.00005f + 0.0012f * (float) val / 127.0f;
+					tracks[1]->attack = 0.00005f
+							+ 0.0012f * (float) val / 127.0f;
 					break;
 
 				default:
 					if (subtype >= MIDI_CC_BT_S1 && subtype <= MIDI_CC_BT_S8) {
 						int8_t note = tracks[0]->notes[subtype - MIDI_CC_BT_S1];
-						tracks[0]->notes[subtype - MIDI_CC_BT_S1] = (
-								(note == -1) ?
-										scale[(tinymt32_generate_uint32(&rng) % 36)] :
+						tracks[0]->notes[subtype - MIDI_CC_BT_S1] =
+								((note == -1) ?
+										24
+												+ scale[(tinymt32_generate_uint32(
+														&rng) % 24)] :
 										-1);
 					}
 					if (subtype >= MIDI_CC_BT_M1 && subtype <= MIDI_CC_BT_M8) {
 						int8_t note = tracks[1]->notes[subtype - MIDI_CC_BT_M1];
-						tracks[1]->notes[subtype - MIDI_CC_BT_M1] = (
-								(note == -1) ?
-										scale[(tinymt32_generate_uint32(&rng) % 24)] :
+						tracks[1]->notes[subtype - MIDI_CC_BT_M1] =
+								((note == -1) ?
+										24
+												+ scale[(tinymt32_generate_uint32(
+														&rng) % 24)] :
 										-1);
 					}
 					break;
@@ -279,7 +293,8 @@ void updateAudioBuffer(Synth *synth) {
 }
 
 void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
-	float freq = notes[note] * powf(1.02, (float) track->pitchBend);
+	float freq = notes[note + transpose[transposeID]]
+			* powf(1.02, (float) track->pitchBend);
 	SynthVoice *voice = synth_new_voice(synth);
 	synth_init_iir(&voice->filter[0], IIR_HP, track->cutoff, track->resonance,
 			track->damping);
@@ -287,7 +302,8 @@ void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 			track->damping);
 //	synth_init_4pole(&voice->filter[0], track->cutoff, track->resonance);
 //	synth_init_4pole(&voice->filter[1], track->cutoff, track->resonance);
-	synth_adsr_init(&voice->env, track->attack, track->decay, 0.005f, 1.0f, 0.95f);
+	synth_adsr_init(&voice->env, track->attack, track->decay, 0.005f, 1.0f,
+			0.95f);
 	synth_osc_init(&voice->lfoPitch, synth_osc_sin, FREQ_TO_RAD(2.0f), 0.0f,
 			10.0f, 0.0f);
 	track->userFn(track, voice, freq, tick);
