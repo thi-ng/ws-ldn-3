@@ -247,15 +247,15 @@ float synth_process_iir(SynthFilter *state, float input) {
 	float freq = state->freq;
 	// 1st pass
 	f[3] = input - damp * f[2];
-	f[0] += freq * f[2];
-	f[1] = f[3] - f[0];
+	*f += freq * f[2];
+	f[1] = f[3] - *f;
 	f[2] += freq * f[1];
 	float output = f[state->type];
 
 	// 2nd pass
 	f[3] = input - damp * f[2];
-	f[0] += freq * f[2];
-	f[1] = f[3] - f[0];
+	*f += freq * f[2];
+	f[1] = f[3] - *f;
 	f[2] += freq * f[1];
 	return 0.5f * (output + f[state->type]);
 }
@@ -316,20 +316,26 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 		float envMod = lfoEnvMod->fn(lfoEnvMod, 0.0f, 0.0f);
 		SynthVoice *voice = &synth->voices[SYNTH_POLYPHONY - 1];
 		while (voice >= synth->voices) {
-			voice->age++;
 			ADSR *env = &voice->env;
 			if (env->phase) {
+				voice->age++;
 				float gain = env->fn(env, envMod);
 				SynthOsc *osc = &voice->lfoPitch;
-				SynthFilter *flt = &voice->filter[0];
 				float lfoVPitchVal = osc->fn(osc, 0.0f, 0.0f);
 				osc = &voice->lfoMorph;
 				float lfoVMorphVal = osc->fn(osc, 0.0f, 0.0f);
 				osc = &voice->osc[0];
+#ifdef SYNTH_USE_FILTER
+				SynthFilter *flt = &voice->filter[0];
 				sumL += (int32_t) (gain * flt->fn(flt, osc->fn(osc, lfoVPitchVal, lfoVMorphVal)));
 				osc++;
 				flt++;
 				sumR += (int32_t) (gain * flt->fn(flt, osc->fn(osc, lfoVPitchVal, lfoVMorphVal)));
+#else
+				sumL += (int32_t) (gain * osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
+				osc++;
+				sumR += (int32_t) (gain * osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
+#endif
 			}
 			voice--;
 		}
@@ -343,8 +349,8 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 			fx->readPtr = &fx->buf[0];
 		}
 #endif
-		*ptr++ = clamp16(sumL);
-		*ptr++ = clamp16(sumR);
+		*ptr++ = __SSAT(sumL, 16); // signed saturate 16bit
+		*ptr++ = __SSAT(sumR, 16);
 #ifdef SYNTH_USE_DELAY
 		*(fx->writePtr++) = clamp16((sumL + sumR) >> fx->decay);
 		fx->writePos++;

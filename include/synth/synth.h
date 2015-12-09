@@ -2,11 +2,12 @@
 #define __SYNTH_H
 
 #include <stdint.h>
+#include "arm_math.h"
 #include "synth/wavetable.h"
 #include "tinymt32.h"
 
 #define TAU						(6.283185307f)
-#define PI						(3.14159265f)
+//#define PI						(3.14159265f)
 #define HALF_PI					(1.570796326794897f)
 #define INV_TAU					(1.0f / TAU)
 #define INV_PI					(1.0f / PI)

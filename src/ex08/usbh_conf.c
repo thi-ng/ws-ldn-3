@@ -56,7 +56,7 @@ void HAL_HCD_MspInit(HCD_HandleTypeDef *hhcd) {
 		;
 
 		/* Set USBFS Interrupt to the lowest priority */
-		HAL_NVIC_SetPriority(OTG_FS_IRQn, 5, 0);
+		HAL_NVIC_SetPriority(OTG_FS_IRQn, 6, 0);
 
 		/* Enable USBFS Interrupt */
 		HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
