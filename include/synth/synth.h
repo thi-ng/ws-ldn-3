@@ -21,7 +21,7 @@
 #endif
 
 #ifndef AUDIO_BUFFER_SIZE
-#define AUDIO_BUFFER_SIZE		(128)
+#define AUDIO_BUFFER_SIZE		(256)
 #endif
 
 #ifndef SYNTH_RNG_SEED

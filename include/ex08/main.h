@@ -26,6 +26,8 @@
 #define MIDI_CC_KNOB1 16
 #define MIDI_CC_KNOB2 17
 #define MIDI_CC_KNOB3 18
+#define MIDI_CC_KNOB4 19
+#define MIDI_CC_KNOB5 20
 
 #define MIDI_CC_BT_S1 32
 #define MIDI_CC_BT_S2 33
