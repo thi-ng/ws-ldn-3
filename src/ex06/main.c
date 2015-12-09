@@ -5,9 +5,6 @@ __IO int32_t isPressed = 0;
 
 uint8_t audioBuffer[AUDIO_BUFFER_SIZE];
 
-static OscFn instruments[] = { synth_osc_sin, synth_osc_rect, synth_osc_tri,
-		synth_osc_saw };
-
 static tinymt32_t rng;
 static __IO uint32_t transposeID = 0;
 
@@ -56,8 +53,7 @@ int main(void) {
 }
 
 void playNote(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
-	float freq = notes[note - 12 + keyChanges[transposeID]];
-	//uint32_t instID = tinymt32_generate_uint32(&rng) & 3;
+	float freq = notes[note + 12 + keyChanges[transposeID]];
 	SynthVoice *voice = synth_new_voice(synth);
 
 	(&voice->filter[0])->type=IIR_LP;

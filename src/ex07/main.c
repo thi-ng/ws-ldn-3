@@ -55,7 +55,7 @@ int main(void) {
 }
 
 void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
-	float freq = notes[note + keyChanges[transposeID]];
+	float freq = notes[note + 24 + keyChanges[transposeID]];
 	SynthVoice *voice = synth_new_voice(synth);
 	synth_adsr_init(&(voice->env), 0.25f, 0.000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
@@ -68,7 +68,7 @@ void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 }
 
 void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
-	float freq = notes[note + keyChanges[transposeID]] * 0.5f;
+	float freq = notes[note + 24 + keyChanges[transposeID]] * 0.5f;
 	SynthVoice *voice = synth_new_voice(synth);
 	synth_adsr_init(&(voice->env), 0.025f, 0.0000025f, 0.005f, 1.0f, 0.95f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
