@@ -117,6 +117,12 @@ float synth_osc_nop(SynthOsc *osc, float lfo, float lfo2) {
 	return osc->dcOffset;
 }
 
+float synth_osc_impulse(SynthOsc *osc, float lfo, float lfo2) {
+	float phase = osc->phase + osc->freq + lfo;
+	osc->phase = phase;
+	return (osc->amp * phase * expf(1.0f - phase)) + osc->dcOffset;
+}
+
 void synth_adsr_init(ADSR *env, float attRate, float decayRate,
 		float releaseRate, float attGain, float sustainGain) {
 	env->attackRate = attRate * ADSR_SCALE

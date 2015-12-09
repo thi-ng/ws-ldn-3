@@ -14,6 +14,7 @@
 #define INV_HALF_PI				(1.0f / HALF_PI)
 
 #define SAMPLERATE				(44100)
+#define INV_SAMPLERATE			(1.0f / SAMPLERATE)
 #define INV_NYQUIST_FREQ		(2.0f / (float)SAMPLERATE)
 
 #ifndef SYNTH_POLYPHONY
@@ -168,6 +169,7 @@ float synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_noise(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_nop(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_impulse(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_wtable_simple(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_wtable_morph(SynthOsc *osc, float lfo, float lfo2);
 
