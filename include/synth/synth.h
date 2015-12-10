@@ -21,6 +21,9 @@
 #define SYNTH_POLYPHONY			(6)
 #endif
 
+#define SYNTH_SATURATE_BITS		16
+#define SYNTH_OVERDRIVE_BITS	0
+
 #ifndef AUDIO_BUFFER_SIZE
 #define AUDIO_BUFFER_SIZE		(256)
 #endif

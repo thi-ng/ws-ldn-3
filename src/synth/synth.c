@@ -375,11 +375,9 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 				flt++;
 				sumR += (int32_t) (gain * flt->fn(flt, osc->fn(osc, lfoVPitchVal, lfoVMorphVal)));
 #else
-				sumL += (int32_t) (gain
-						* osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
+				sumL += (int32_t) (gain * osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
 				osc++;
-				sumR += (int32_t) (gain
-						* osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
+				sumR += (int32_t) (gain * osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
 #endif
 			}
 			voice--;
@@ -394,10 +392,10 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 			fx->readPtr = &fx->buf[0];
 		}
 #endif
-		*ptr++ = __SSAT(sumL, 16); // signed saturate 16bit
-		*ptr++ = __SSAT(sumR, 16);
+		*ptr++ = __SSAT(sumL, SYNTH_SATURATE_BITS) << SYNTH_OVERDRIVE_BITS; // signed saturate & opt. overdrive
+		*ptr++ = __SSAT(sumR, SYNTH_SATURATE_BITS) << SYNTH_OVERDRIVE_BITS;
 #ifdef SYNTH_USE_DELAY
-		*(fx->writePtr++) = clamp16((sumL + sumR) >> fx->decay);
+		*(fx->writePtr++) = __SSAT((sumL + sumR) >> fx->decay, 16);
 		fx->writePos++;
 		if (fx->writePos >= fx->len) {
 			fx->writePos = 0;
