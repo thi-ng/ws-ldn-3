@@ -38,14 +38,15 @@ int main(void) {
 	int8_t notes1[16] = { 36, -1, 12, 12, -1, -1, -1, -1, 48, -1, 17, 12, -1,
 			-1, 24, 24 };
 
-	int8_t notes2[16] = { 12, -1, -1, -1, 12, -1, -1, -1, 12, -1, -1, -1, 12,
-			-1, -1, 7 };
+	int8_t notes2[32] = { 12, -1, -1, -1, 12, -1, -1, -1, 12, -1, -1, -1, 12,
+			-1, -1, 7, 12, -1, -1, -1, 12, -1, -1, -1, 12, -1, -1, -1, 12,
+			-1, 19, 7 };
 
 	tracks[0] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst1,
 			notes1, 16, 250, 0.5f);
 
 	tracks[1] = initTrack((SeqTrack*) malloc(sizeof(SeqTrack)), playNoteInst2,
-			notes2, 16, 250, 1.0f);
+			notes2, 32, 250, 1.0f);
 
 	while (1) {
 		uint32_t tick = HAL_GetTick();
