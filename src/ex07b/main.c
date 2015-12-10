@@ -64,17 +64,13 @@ void playNoteInst1(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 	synth_set_iir_coeff(&voice->filter[0], fcutoff, fresonance, 0.15f);
 	synth_set_iir_coeff(&voice->filter[1], fcutoff, fresonance, 0.15f);
 
-	synth_adsr_init(&(voice->env), 0.25f, 0.0005f, 0.0002f, 1.0f, 0.5f);
-//	synth_osc_init(&(voice->lfoPitch), synth_osc_sin, FREQ_TO_RAD(5.0f), 0.0f,
-//			10.0f, 0.0f);
-	synth_osc_init(&(voice->lfoPitch), synth_osc_impulse,
-			FREQ_TO_RAD(freq * 4.0f), 0.0f, 10.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_wtable_simple, 0.25f, 0.0f, freq,
+	synth_adsr_init(&(voice->env), 0.25f, 0.0005f, 0.000175f, 1.0f, 0.75f);
+	synth_osc_init(&(voice->osc[0]), synth_osc_pinknoise, 0.2f, 0.0f, freq,
 			0.0f);
-	synth_osc_set_wavetables(&(voice->osc[0]), wtable_noise, NULL);
-	synth_osc_init(&(voice->osc[1]), synth_osc_wtable_simple, 0.25f, 0.0f,
+//	synth_osc_set_wavetables(&(voice->osc[0]), wtable_noise, NULL);
+	synth_osc_init(&(voice->osc[1]), synth_osc_pinknoise, 0.2f, 0.0f,
 			freq * 1.01f, 0.0f);
-	synth_osc_set_wavetables(&(voice->osc[1]), wtable_noise, NULL);
+//	synth_osc_set_wavetables(&(voice->osc[1]), wtable_noise, NULL);
 	BSP_LED_Toggle(LED_GREEN);
 }
 
@@ -91,9 +87,9 @@ void playNoteInst2(Synth* synth, SeqTrack *track, int8_t note, uint32_t tick) {
 //			10.0f, 0.0f);
 	synth_osc_init(&(voice->lfoPitch), synth_osc_impulse,
 			FREQ_TO_RAD(freq * 3.0f), 0.0f, 20.0f, 0.0f);
-	synth_osc_init(&(voice->osc[0]), synth_osc_sin_math, 0.33f, 0.0f, freq,
+	synth_osc_init(&(voice->osc[0]), synth_osc_sin_math, 0.4f, 0.0f, freq,
 			0.0f);
-	synth_osc_init(&(voice->osc[1]), synth_osc_sin_math, 0.33f, 0.0f,
+	synth_osc_init(&(voice->osc[1]), synth_osc_sin_math, 0.4f, 0.0f,
 			freq * 0.99f, 0.0f);
 	BSP_LED_Toggle(LED_ORANGE);
 }

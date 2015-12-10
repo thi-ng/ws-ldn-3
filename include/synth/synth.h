@@ -151,6 +151,8 @@ typedef struct {
 	uint8_t nextVoice;
 } Synth;
 
+float synth_pinknoise_buf[16];
+
 void synth_osc_init(SynthOsc *osc, OscFn fn, float gain, float phase,
 		float freq, float dc);
 void synth_osc_set_wavetables(SynthOsc *osc, const float *tbl1,
@@ -166,8 +168,10 @@ float synth_osc_saw(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_saw_dc(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_tri(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_tri_dc(SynthOsc *osc, float lfo, float lfo2);
-float synth_osc_noise(SynthOsc *osc, float lfo, float lfo2);
-float synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_whitenoise(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_whitenoise_dc(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_brownnoise(SynthOsc *osc, float lfo, float lfo2);
+float synth_osc_pinknoise(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_nop(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_impulse(SynthOsc *osc, float lfo, float lfo2);
 float synth_osc_wtable_simple(SynthOsc *osc, float lfo, float lfo2);

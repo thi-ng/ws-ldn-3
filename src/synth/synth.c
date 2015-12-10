@@ -105,12 +105,47 @@ float synth_osc_wtable_morph(SynthOsc *osc, float lfo, float morph) {
 			WTABLE_LOOKUP_RAW(osc->wtable2, idx), morph) * osc->amp;
 }
 
-float synth_osc_noise(SynthOsc *osc, float lfo, float lfo2) {
+float synth_osc_whitenoise(SynthOsc *osc, float lfo, float lfo2) {
 	return NORM_RANDF(&synthRNG) * osc->amp;
 }
 
-float synth_osc_noise_dc(SynthOsc *osc, float lfo, float lfo2) {
+float synth_osc_whitenoise_dc(SynthOsc *osc, float lfo, float lfo2) {
 	return osc->dcOffset + NORM_RANDF(&synthRNG) * osc->amp;
+}
+
+float synth_osc_brownnoise(SynthOsc *osc, float lfo, float lfo2) {
+	float b = osc->phase;
+	while (1) {
+		float r = tinymt32_generate_float01(&synthRNG) - 0.5f;
+		b += r;
+		if (b < -8.0f || b > 8.0f)
+			b -= r;
+		else
+			break;
+	}
+	osc->phase = b;
+	return b * 0.125f * osc->amp;
+}
+
+static uint32_t synthPinkIdx = 0;
+
+float synth_osc_pinknoise(SynthOsc *osc, float lfo, float lfo2) {
+	float prevr, curr, r, phase;
+	uint32_t k = __CLZ(synthPinkIdx) & 0xf;
+	prevr = synth_pinknoise_buf[k];
+	while (1) {
+		curr = r = tinymt32_generate_float01(&synthRNG) - 0.5f;
+		r -= prevr;
+		phase = osc->phase + r;
+		if (phase < -4.0f || phase > 4.0f)
+			phase -= r;
+		else
+			break;
+	}
+	synth_pinknoise_buf[k] = curr;
+	osc->phase = phase;
+	synthPinkIdx++;
+	return (tinymt32_generate_float01(&synthRNG) - 0.5f + phase) * 0.125f;
 }
 
 float synth_osc_nop(SynthOsc *osc, float lfo, float lfo2) {
@@ -177,8 +212,10 @@ float synth_adsr_update_idle(ADSR *env, float envMod) {
 void synth_voice_init(SynthVoice *voice, uint32_t flags) {
 	synth_osc_init(&(voice->lfoPitch), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
 	synth_osc_init(&(voice->lfoMorph), synth_osc_nop, 0.0f, 0.0f, 0.0f, 0.0f);
+#ifdef SYNTH_USE_FILTER
 	synth_init_iir(&(voice->filter[0]), IIR_HP, 0.0f, 0.85f, 0.5f);
 	synth_init_iir(&(voice->filter[1]), IIR_HP, 0.0f, 0.85f, 0.5f);
+#endif
 	voice->age = 0;
 	voice->flags = flags;
 }
@@ -338,9 +375,11 @@ void synth_render_slice(Synth *synth, int16_t *ptr, size_t len) {
 				flt++;
 				sumR += (int32_t) (gain * flt->fn(flt, osc->fn(osc, lfoVPitchVal, lfoVMorphVal)));
 #else
-				sumL += (int32_t) (gain * osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
+				sumL += (int32_t) (gain
+						* osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
 				osc++;
-				sumR += (int32_t) (gain * osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
+				sumR += (int32_t) (gain
+						* osc->fn(osc, lfoVPitchVal, lfoVMorphVal));
 #endif
 			}
 			voice--;
