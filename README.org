@@ -3,7 +3,7 @@
 [[./assets/ws-ldn-3-synth.jpg]]
 
 * Contents                                                         :toc_3_gh:
- - [[#diy-synth--gui-workshop-with-stm32f7-arm-cortex-m7][DIY Synth & GUI workshop with STM32F7 (ARM Cortex-M7)]]
+ - [[#diy-synth-workshop-with-stm32f401-disco-arm-cortex-m4][DIY Synth workshop with STM32F401-DISCO (ARM Cortex-M4)]]
      - [[#overview][Overview]]
      - [[#status][Status]]
      - [[#examples--exercises][Examples / exercises]]
@@ -18,7 +18,7 @@
      - [[#building-the-exercises][Building the exercises]]
      - [[#license][License]]
 
-* DIY Synth & GUI workshop with STM32F7 (ARM Cortex-M7)
+* DIY Synth workshop with STM32F401-DISCO (ARM Cortex-M4)
 
 ** Overview
 
