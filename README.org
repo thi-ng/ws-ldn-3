@@ -1,0 +1,84 @@
+#+TITLE: thi.ng/ws-ldn-3
+
+[[./assets/ws-ldn-3-synth.jpg]]
+
+* Contents                                                         :toc_3_gh:
+ - [[#diy-synth--gui-workshop-with-stm32f7-arm-cortex-m7][DIY Synth & GUI workshop with STM32F7 (ARM Cortex-M7)]]
+     - [[#overview][Overview]]
+     - [[#status][Status]]
+     - [[#examples--exercises][Examples / exercises]]
+         - [[#ex01---hello-blinky][ex01 - Hello Blinky]]
+         - [[#ex02---timers--interrupts][ex02 - Timers & interrupts]]
+         - [[#ex03---accelerometer--gyroscope][ex03 - Accelerometer & Gyroscope]]
+         - [[#ex04---audio-playback--record][ex04 - Audio playback & record]]
+         - [[#ex05---usb-audio-playback--record][ex05 - USB audio playback & record]]
+         - [[#ex06---synth--sequencer-basics][ex06 - Synth & sequencer basics]]
+         - [[#ex07---synth-example-2][ex07 - Synth example #2]]
+         - [[#ex08---midi-synth][ex08 - MIDI synth]]
+     - [[#building-the-exercises][Building the exercises]]
+     - [[#license][License]]
+
+* DIY Synth & GUI workshop with STM32F7 (ARM Cortex-M7)
+
+** Overview
+
+TODO
+
+** Status
+
+Stable
+
+** Examples / exercises
+
+*** ex01 - Hello Blinky
+
+Simple LED blink example and GPIO (push button) handling, polling vs.
+EXTI interrupt
+
+*** ex02 - Timers & interrupts
+
+Introduction to timers, configuration and custom interrupt handlers.
+Useful for basic multi-tasking.
+
+*** ex03 - Accelerometer & Gyroscope
+
+*** ex04 - Audio playback & record
+
+*** ex05 - USB audio playback & record
+
+*** ex06 - Synth & sequencer basics
+
+*** ex07 - Synth example #2
+
+*** ex08 - MIDI synth
+
+This example uses a 2-track sequencer, which can be controlled via a
+connected MIDI controller. In the workshop we used the Korg Nanokey2
+for this purpose and a configuration file for this device is included.
+If you use a different controller, make sure you edit the controller
+assignments in =/include/ex08/main.h=.
+
+** Building the exercises
+
+This repo contains a complete Eclipse CDT project and can be built
+with [[http://gnuarmeclipse.github.io][GNU ARM Eclipse]] plugin. Furthermore, the [[https://launchpad.net/gcc-arm-embedded][ARM GCC toolchain]] is
+required outside Eclipse.
+
+Within the project, you can find several build configurations, one per
+example/exercise. Build profiles can be switched by clicking on the
+little triangle next to the hammer (build) icon in the main toolbar.
+Once a profile has been built, you'll find the resulting =.bin= file
+in the profile's subfolder of this project. E.g. =ex08='s binary will
+be located in ={$PROJECT_DIR}/ex08/diy_synth_ldn_2015.bin=.
+
+For programming/flashing the STM32F401-DISCO board, we used the
+[[https://github.com/texane/stlink][st-flash]] tool and invoke it like this:
+
+#+BEGIN_SRC bash
+cd ws-ldn-3
+st-flash --reset write ex08/diy_synth_ldn_2015.bin 0x8000000
+#+END_SRC
+
+** License
+
+This project is open source and licensed under the [[http://www.apache.org/licenses/LICENSE-2.0][Apache Software License 2.0]].
