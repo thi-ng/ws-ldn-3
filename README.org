@@ -71,6 +71,12 @@ Once a profile has been built, you'll find the resulting =.bin= file
 in the profile's subfolder of this project. E.g. =ex08='s binary will
 be located in ={$PROJECT_DIR}/ex08/diy_synth_ldn_2015.bin=.
 
+*Important:* The build profile called "base" is only a template and is
+NOT buildable. However it is the default profile after importing the
+project into Eclipse. So if it starts building the project
+automatically and you get lots of errors, let it finish and then
+select one of the example profiles ("ex01"...) as described above.
+
 For programming/flashing the STM32F401-DISCO board, we used the
 [[https://github.com/texane/stlink][st-flash]] tool and invoke it like this:
 
